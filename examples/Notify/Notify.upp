@@ -1,0 +1,13 @@
+description "A minimal client application demonstrating how to trigger a native desktop notification using a simple blocking method call.\377";
+
+uses
+	Core,
+	DBus;
+
+file
+	Notify.h,
+	Notify.cpp;
+
+mainconfig
+	"" = "";
+

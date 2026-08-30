@@ -1,0 +1,12 @@
+description "An asynchronous listener that subscribes to system-wide D-Bus broadcast signals and logs them to the console in real-time.\377";
+
+uses
+	Core,
+	DBus;
+
+file
+	Monitor.cpp;
+
+mainconfig
+	"" = "";
+

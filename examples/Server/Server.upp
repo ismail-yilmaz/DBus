@@ -1,0 +1,12 @@
+description " A headless background daemon that claims a well-known bus name and routes remote method requests asynchronously. \377";
+
+uses
+	Core,
+	DBus;
+
+file
+	Server.cpp;
+
+mainconfig
+	"" = "";
+

@@ -1,0 +1,10 @@
+uses
+	Core,
+	DBus;
+
+file
+	DBusAutoTest.cpp;
+
+mainconfig
+	"" = "";
+

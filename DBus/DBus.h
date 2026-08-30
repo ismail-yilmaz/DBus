@@ -1,0 +1,63 @@
+#ifndef _Upp_DBus_h
+#define _Upp_DBus_h
+
+#include <Core/Core.h>
+
+namespace Upp {
+
+// Forward declarations
+struct DBusValue;
+
+struct DBusValueMap : public VectorMap<String, DBusValue> {
+    using VectorMap<String, DBusValue>::VectorMap;
+    using VectorMap<String, DBusValue>::operator=;
+    DBusValueMap(const DBusValueMap& v) : VectorMap<String, DBusValue>(v, 1) {}
+};
+
+struct DBusValueArray : public Vector<DBusValue> {
+    using Vector<DBusValue>::Vector;
+    using Vector<DBusValue>::operator=;
+    DBusValueArray(const DBusValueArray& v) : Vector<DBusValue>(v, 1) {}
+};
+
+struct DBusValueStruct : public Vector<DBusValue> {
+    using Vector<DBusValue>::Vector;
+    using Vector<DBusValue>::operator=;
+    DBusValueStruct(const DBusValueStruct& v) : Vector<DBusValue>(v, 1) {}
+};
+
+
+class DBusValue : public Moveable<DBusValue>  {
+public:
+    DBusValue()                                               {}
+    DBusValue(byte v) : value(RawToValue(v))                  {}
+    DBusValue(int16 v) : value(RawToValue(v))                 {}
+    DBusValue(uint16 v) : value(RawToValue(v))                {}
+    DBusValue(int32 v) : value(v)                             {}
+    DBusValue(uint32 v) : value(RawToValue(v))                {}
+    DBusValue(int64 v) : value(v)                             {}
+    DBusValue(uint64 v) : value(RawToValue(v))                {}
+    DBusValue(bool v) : value(v)                              {}
+    DBusValue(double v) : value(v)                            {}
+    DBusValue(const String& s) : value(s)                     {}
+    DBusValue(const char* s) : value(String(s))               {}
+    DBusValue(const Nuller& v) : value(v)                     {}
+    DBusValue(const DBusValueMap& v) : value(RawToValue(v))   {}
+    DBusValue(const DBusValueArray& v) : value(RawToValue(v)) {}
+    DBusValue(const DBusValueStruct& v) : value(RawToValue(v)) {}
+    
+    bool IsNullInstance() const                               { return value.IsNull(); }
+    template<typename T>  bool     Is() const                 { return value.Is<T>(); }
+    template<typename T>  const T& To() const                 { return value.To<T>(); }
+    template<typename T>  operator T() const                  { return value.To<T>(); }
+
+private:
+	Value value;
+};
+
+#include "Parser.h"
+#include "Message.h"
+#include "Connection.h"
+
+}
+#endif

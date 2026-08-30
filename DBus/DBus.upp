@@ -1,0 +1,22 @@
+description "D-Bus client implementation for U++\377";
+
+uses
+	Core;
+
+file
+	DBus.h,
+	Parser.h,
+	Parser.cpp,
+	Message.h,
+	Message.cpp,
+	Connection.h,
+	Connection.cpp,
+	Docs readonly separator,
+	src.tpp,
+	srcdoc.tpp,
+	Info readonly separator,
+	Copying;
+
+mainconfig
+	"" = "";
+
