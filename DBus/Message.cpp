@@ -180,13 +180,20 @@ void MarshalParam(String& body, String& signature, const DBusValue& val)
 		// Determine correct alignment for the D-Bus array payload
 		int elmaln = 4;
 		char bsig = elmsig[0];
-		if(bsig == DBUS_INT64 || bsig == DBUS_UINT64 || bsig == DBUS_DOUBLE || bsig == '(' || bsig == '{')
+		if(bsig == DBUS_INT64
+		|| bsig == DBUS_UINT64
+		|| bsig == DBUS_DOUBLE
+		|| bsig == '('
+		|| bsig == '{')
 			elmaln = 8;
 		else
-		if(bsig == DBUS_INT16 || bsig == DBUS_UINT16)
+		if(bsig == DBUS_INT16
+		|| bsig == DBUS_UINT16)
 			elmaln = 2;
 		else
-		if(bsig == DBUS_BYTE || bsig == 'v' || bsig == 'g')
+		if(bsig == DBUS_BYTE
+		|| bsig == 'v'
+		|| bsig == 'g')
 			elmaln = 1;
 
 		AppendAlign(body, elmaln);
@@ -368,13 +375,23 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 		sigbp.Seek(savedoff);
 
 		int aln = 1;
-		if(c == DBUS_INT64 || c == DBUS_UINT64 || c == DBUS_DOUBLE || c == '{' || c == '(')
+		if(c == DBUS_INT64
+		|| c == DBUS_UINT64
+		|| c == DBUS_DOUBLE
+		|| c == '{'
+		|| c == '(')
 			aln = 8;
 		else
-		if(c == DBUS_INT32 || c == DBUS_UINT32 || c == DBUS_BOOL || c == DBUS_STRING || c == DBUS_OBJECT_PATH || c == DBUS_ARRAY)
+		if(c == DBUS_INT32
+		|| c == DBUS_UINT32
+		|| c == DBUS_BOOL
+		|| c == DBUS_STRING
+		|| c == DBUS_OBJECT_PATH
+		|| c == DBUS_ARRAY)
 			aln = 4;
 		else
-		if(c == DBUS_INT16 || c == DBUS_UINT16)
+		if(c == DBUS_INT16
+		|| c == DBUS_UINT16)
 			aln = 2;
 
 		bp.Align(aln);
@@ -389,6 +406,7 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 				DBusValue val = ParseType(bp, sigbp);
 				map.Add(key, val);
 			}
+			sigbp.Seek(savedoff); // Loop body always leaves sigbp one byte short, sitting on '}'
 			return map;
 		}
 		else {
