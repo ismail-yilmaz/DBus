@@ -275,28 +275,34 @@ void MarshalParams(String& body, String& signature, const DBusValueArray& args)
 		MarshalParam(body, signature, v);
 }
 
-void SkipSignature(BParser& sigbp)
+void SkipSignature(BParser& sigbp, int depth = 0)
 {
+	if(depth > 32)
+		throw Exc("D-Bus signature recursion limit exceeded.");
+
 	if(!sigbp.IsAvail(1))
 		return;
 
 	char c = (char)sigbp.GetByte();
 	if(c == DBUS_ARRAY) {
-		SkipSignature(sigbp);
+		SkipSignature(sigbp, depth + 1);
 	}
 	else
 	if(c == '{' || c == '(') {
 		char endc = (c == '{') ? '}' : ')';
 		while(sigbp.IsAvail(1) && sigbp.PeekByte() != endc) {
-			SkipSignature(sigbp);
+			SkipSignature(sigbp, depth + 1);
 		}
 		if(sigbp.IsAvail(1) && sigbp.PeekByte() == endc)
 			sigbp.SkipByte();
 	}
 }
 
-DBusValue ParseType(BParser& bp, BParser& sigbp)
+DBusValue ParseType(BParser& bp, BParser& sigbp, int depth = 0)
 {
+	if(depth > 32)
+		throw Exc("D-Bus container recursion limit exceeded.");
+
 	if(!sigbp.IsAvail(1))
 		return Null;
 
@@ -358,7 +364,7 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 		bp.SkipByte();                        // Skip null terminator in payload body
 		if(len > 0) {
 			BParser subbp(vsig);
-			return ParseType(bp, subbp);
+			return ParseType(bp, subbp, depth + 1);
 		}
 		return Null;
 	}
@@ -367,7 +373,7 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 		dword len = bp.ReadDword();
 
 		int elmsigoff = (int) sigbp.GetOffset();
-		SkipSignature(sigbp);                // Advance parent pointer past the element signature
+		SkipSignature(sigbp, depth + 1);                // Advance parent pointer past the element signature
 
 		int savedoff = (int)sigbp.GetOffset();
 		sigbp.Seek(elmsigoff);
@@ -402,8 +408,8 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 			while((int) bp.GetOffset() < endpos) {
 				bp.Align(8);
 				sigbp.Seek(elmsigoff + 1); // Skip '{'
-				DBusValue key = ParseType(bp, sigbp);
-				DBusValue val = ParseType(bp, sigbp);
+				DBusValue key = ParseType(bp, sigbp, depth + 1);
+				DBusValue val = ParseType(bp, sigbp, depth + 1);
 				map.Add(key, val);
 			}
 			sigbp.Seek(savedoff); // Loop body always leaves sigbp one byte short, sitting on '}'
@@ -413,7 +419,7 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 			DBusValueArray arr;
 			while((int) bp.GetOffset() < endpos) {
 				sigbp.Seek(elmsigoff);
-				DBusValue val = ParseType(bp, sigbp);
+				DBusValue val = ParseType(bp, sigbp, depth + 1);
 				arr.Add(val);
 			}
 			return arr;
@@ -423,7 +429,7 @@ DBusValue ParseType(BParser& bp, BParser& sigbp)
 		DBusValueStruct strc;
 		bp.Align(8);
 		while(sigbp.IsAvail(1) && sigbp.PeekByte() != ')')
-			strc.Add(ParseType(bp, sigbp));
+			strc.Add(ParseType(bp, sigbp, depth + 1));
 		if(sigbp.IsAvail(1) && sigbp.PeekByte() == ')')
 			sigbp.SkipByte();
 		return strc;
@@ -469,7 +475,11 @@ DBusMessage DBusMessage::Create(byte type, byte flags, dword serial, String fiel
 		fields.Cat(DBUS_SIGNATURE);
 		fields.Cat(0);
 		AppendAlign(fields, 4);
-		byte siglen = signature.GetLength();
+
+		if(signature.GetLength() > 255)
+			throw Exc("D-Bus signature exceeds 255 byte specification limit.");
+
+		byte siglen = (byte) signature.GetLength();
 		fields.Cat(siglen);
 		fields.Cat(signature);
 		fields.Cat(0);
@@ -624,6 +634,9 @@ DBusMessage::FieldData DBusMessage::ParseFields() const
 	catch(const BParser::Error& e) {
 		LLOG("ParseFields() failed: " << e);
 	}
+	catch(const Exc& e) {
+		LLOG("ParseFields() failed: " << e);
+	}
 
 	return fields;
 }
@@ -652,6 +665,9 @@ DBusValueArray DBusMessage::ParseBody() const
 		}
 	}
 	catch(const BParser::Error& e) {
+		LLOG("ParseBody() failed: " << e);
+	}
+	catch(const Exc& e) {
 		LLOG("ParseBody() failed: " << e);
 	}
 
@@ -733,6 +749,9 @@ Vector<String> DBusMessage::ParseStringArray() const
 	catch(const BParser::Error& e) {
 		LLOG("ParseStringArray() failed: " << e);
 	}
+	catch(const Exc& e) {
+		LLOG("ParseStringArray() failed: " << e);
+	}
 
 	return result;
 }
@@ -752,6 +771,10 @@ String DBusMessage::ParseString() const
 		return bp.ReadString(len);
 	}
 	catch(const BParser::Error& e) {
+		LLOG("ParseString() failed: " << e);
+		return String::GetVoid();
+	}
+	catch(const Exc& e) {
 		LLOG("ParseString() failed: " << e);
 		return String::GetVoid();
 	}

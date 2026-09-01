@@ -6,7 +6,9 @@
 namespace Upp {
 
 namespace {
-	
+
+constexpr const dword DBUS_SIZECAP = 128 * (1024 * 1024); // 128 MiB, max len.
+
 struct EventLock {
 	bool& latch,  prev;
 	EventLock(bool& l) : latch(l), prev(l) { latch = true; }
@@ -36,7 +38,7 @@ String ParseDBusAddress(String path, bool& abstract)
 }
 }
 
-const char* DBusConnection::GetMsg(int code)
+const char* DBusConnection::GetErrorMsg(int code)
 {
 	static const Tuple<int, const char*> errors[] = {
 		{ CONNECTION_FAILED, t_("Couldn't connect to D-Bus server") },
@@ -90,8 +92,7 @@ bool DBusConnection::FsConnect()
 		LLOG("Successfully connected to D-Bus at " << buspath);
 		return true;
 	}
-	else
-		SetError(CONNECTION_FAILED);
+	SetError(CONNECTION_FAILED);
 	return false;
 }
 
@@ -101,8 +102,7 @@ bool DBusConnection::AsConnect()
 		LLOG("Successfully connected to D-Bus (abstract) at " << buspath);
 		return true;
 	}
-	else
-		SetError(CONNECTION_FAILED);
+	SetError(CONNECTION_FAILED);
 	return false;
 }
 
@@ -115,6 +115,7 @@ bool DBusConnection::Get()
 		if(c < 0)
 			break;
 		packet.Cat(c);
+		Check(packet);
 		starttime = msecs();
 	}
 	return false;
@@ -141,7 +142,7 @@ bool DBusConnection::Put()
 bool DBusConnection::Drain()
 {
 	// Server "Put"
-	
+
 	if(!extpacket.GetCount()) {
 		extpacklen = 0;
 		return false;
@@ -173,6 +174,12 @@ void DBusConnection::PutGet()
 	queue.AddTail() = [this] { return Get(); };
 }
 
+void DBusConnection::Check(const String& s)
+{
+	if(s.GetLength() > DBUS_SIZECAP)
+		SetError(INVALID_PACKET);
+}
+
 void DBusConnection::Check()
 {
 	if(status != WORKING)
@@ -180,7 +187,7 @@ void DBusConnection::Check()
 	if(IsTimeout())
 		SetError(CONNECTION_TIMED_OUT);
 	if(socket.IsError())
-		throw Error("Socket failure. " + socket.GetErrorDesc());
+		SetError(SOCKET_FAILURE);
 	if(socket.IsAbort())
 		SetError(ABORTED);
 }
@@ -272,7 +279,8 @@ bool DBusConnection::AuthParse()
 {
 	LLOG("<< AUTH: Reply received.");
 	LDUMPHEX(packet);
-	if(packet.Find("OK") >= 0) {
+	
+	if(packet.StartsWith("OK")) {
 		packet = "BEGIN\r\n";
 		packlen = 0;
 		IsEof = [this] { return HelloIsEof(); };
@@ -280,6 +288,7 @@ bool DBusConnection::AuthParse()
 		queue.AddTail([this] { return HelloRequest(); });
 		return true;
 	}
+
 	SetError(AUTH_FAILED);
 	return false;
 }
@@ -287,11 +296,11 @@ bool DBusConnection::AuthParse()
 bool DBusConnection::HelloRequest()
 {
 	LLOG("Starting Hello request...");
-	packet = DBusMessage::CreateMethodCall(serial++,
+	packet = ~DBusMessage::CreateMethodCall(serial++,
 								"org.freedesktop.DBus",
 								"/org/freedesktop/DBus",
 								"org.freedesktop.DBus",
-								"Hello").GetRawData();
+								"Hello");
 	packlen = 0;
 
 	LLOG(">> HELLO: Sending request.");
@@ -313,7 +322,7 @@ bool DBusConnection::HelloParse()
 {
 	DBusMessage msg = ExtractMessage();
 	LLOG("<< HELLO: Reply or signal received.");
-	LDUMPHEX(msg.GetRawData());
+	LDUMPHEX(~msg);
 
 	if(msg.IsSignal()) {
 		DispatchSignal(msg);
@@ -335,40 +344,48 @@ bool DBusConnection::HelloParse()
 	return false;
 }
 
-bool DBusConnection::MsgIsEof()
+bool DBusConnection::GetMessageLength(int& tot)
 {
-	if(packet.GetCount() >= 16) {
-		BParser bp(packet);
-		bp.BigEndian(bp.PeekByte() == 'B');
-		bp.Skip(4);
-		dword body = bp.ReadDword();
-		bp.Skip(4);
-		dword flds = bp.ReadDword();
+	if(packet.GetCount() < 16)
+		return false;
 
-		int hdr = 16 + flds;
-		int pad = (hdr % 8 != 0) ? 8 - (hdr % 8) : 0;
-		int tot = hdr + pad + body;
-
-		return packet.GetCount() >= tot;
-	}
-	return false;
-}
-
-DBusMessage DBusConnection::ExtractMessage()
-{
 	BParser bp(packet);
 	bp.BigEndian(bp.PeekByte() == 'B');
+
 	bp.Skip(4);
 	dword body = bp.ReadDword();
 	bp.Skip(4);
 	dword flds = bp.ReadDword();
 
-	int hdr = 16 + flds;
-	int pad = (hdr % 8 != 0) ? 8 - (hdr % 8) : 0;
-	int tot = hdr + pad + body;
+	if(flds > DBUS_SIZECAP || body > DBUS_SIZECAP)
+		SetError(INVALID_PACKET);
 
-	String res = packet.Left(tot);
-	packet.Remove(0, tot);
+	int64 hdr = 16 + (int64) flds;
+	int64 pad = (hdr % 8 != 0) ? 8 - (hdr % 8) : 0;
+	int64 total = hdr + pad + (int64) body;
+
+	if(total > DBUS_SIZECAP)
+		SetError(INVALID_PACKET);
+
+	tot = (int) total;
+
+	return true;
+}
+
+bool DBusConnection::MsgIsEof()
+{
+	int total;
+	if(!GetMessageLength(total))
+		return false;
+	return packet.GetCount() >= total;
+}
+
+DBusMessage DBusConnection::ExtractMessage()
+{
+	int total;
+	GetMessageLength(total);
+	String res = packet.Left(total);
+	packet.Remove(0, total);
 	return DBusMessage(res);
 }
 
@@ -378,15 +395,15 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,
 {
 	ASSERT(socket.IsOpen());
 	ASSERT_(!dispatching, "FATAL: Reentrant synchronous D-Bus call detected inside a callback!");
-	
+
 	if(dispatching) {
 		RLOG("!!!Aborting!!! Synchronous MethodCall attempted inside an active IPC callback.");
 		return false;
 	}
-	
+
 	replymsg = DBusMessage();
 	callserial = serial++;
-	packet = DBusMessage::CreateMethodCall(callserial, dest, path, iface, method, args).GetRawData();
+	packet = ~DBusMessage::CreateMethodCall(callserial, dest, path, iface, method, args);
 	packlen = 0;
 	queue.Clear();
 	IsEof = [this] { return MethodIsEof(); };
@@ -413,7 +430,7 @@ bool DBusConnection::MethodRequest()
 void DBusConnection::DispatchSignal(const DBusMessage& msg)
 {
 	EventLock __(dispatching);
-	
+
 	bool handled = false;
 	for(const auto& sm : signalmatches) {
 		if(msg.MatchRule(sm.rule)) {
@@ -506,9 +523,9 @@ bool DBusConnection::Do0()
 		extpacket.Clear();
 		extpacklen = 0;
 		socket.ClearAbort();
-		error = MakeTuple<int, String>(EXCEPTION, GetMsg(-1));
+		error = MakeTuple<int, String>(EXCEPTION, GetErrorMsg(-1));
 	}
-	
+
 	return status == WORKING;
 }
 
@@ -516,12 +533,12 @@ bool DBusConnection::Run()
 {
 	if(async)
 		return true;
-	
+
 	SocketWaitEvent we;
 	AddTo(we);
 	while(Do0())
 		we.Wait(waitstep);
-	
+
 	return !IsError();
 }
 

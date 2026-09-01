@@ -67,8 +67,8 @@ public:
     };
 
 private:
-    static const char*  GetMsg(int code);
-    void                SetError(int code)                              { throw Error(code, GetMsg(code)); }
+    static const char*  GetErrorMsg(int code);
+    void                SetError(int code)                              { throw Error(code, GetErrorMsg(code)); }
     bool                Init();
     void                Touch()                                         { status = WORKING; starttime = msecs(); }
     bool                FsConnect();
@@ -77,6 +77,7 @@ private:
     bool                Put();
     bool                Drain();
     void                PutGet();
+    void                Check(const String& s);
     void                Check();
     bool                Do0();
     bool                Run();
@@ -97,6 +98,8 @@ private:
     bool                ListenIsEof();
     void                DispatchSignal(const DBusMessage& msg);
 
+    bool                GetMessageLength(int& tot);
+    
     bool                MsgIsEof();
     DBusMessage         ExtractMessage();
     
