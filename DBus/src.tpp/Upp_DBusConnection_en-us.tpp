@@ -156,6 +156,12 @@ DBusMessage[@(0.0.255) `&]> [*@3 cb] [@(0.0.255) `=] Null)&]
 matching signals are routed directly to it. Returns true on success.&]
 [s3; &]
 [s4; &]
+[s5;:Upp`:`:DBusConnection`:`:RemoveMatch`(const String`&`): [@(0.0.255) bool] 
+[* RemoveMatch]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 rule])&]
+[s2;%% Unregisters the specified matching [%-*@3 rule] added by [^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection`:`:AddMatch`(const String`&`,Event`)^ A
+ddMatch()] method. Returns true on success.&]
+[s3; &]
+[s4; &]
 [s5;:Upp`:`:DBusConnection`:`:FetchProperty`(const String`&`,const String`&`,const String`&`,const String`&`): [@(0.0.255) b
 ool] [* FetchProperty]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 destination], 
 [@(0.0.255) const] String[@(0.0.255) `&] [*@3 path], [@(0.0.255) const] 

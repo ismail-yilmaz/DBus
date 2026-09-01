@@ -532,12 +532,39 @@ bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 		sm.rule = rule;
 		sm.cb = cb;
 	}
-	
+
 	if(!socket.IsOpen())
 		return true;
-	
-	return MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus",
-					"org.freedesktop.DBus", "AddMatch", DBusValueArray{ rule });
+
+	if(dispatching) {
+		extpacket << ~DBusMessage::CreateMethodCall(serial++,
+								"org.freedesktop.DBus", "/org/freedesktop/DBus",
+								"org.freedesktop.DBus", "AddMatch", { rule });
+		Touch();
+		return true;
+	}
+	else
+		return MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus",
+						"org.freedesktop.DBus", "AddMatch", { rule });
+}
+
+bool DBusConnection::RemoveMatch(const String& rule)
+{
+	signalmatches.RemoveIf([&](int i) { return signalmatches[i].rule == rule; });
+
+	if(!socket.IsOpen())
+		return true;
+
+	if(dispatching) {
+		extpacket << ~DBusMessage::CreateMethodCall(serial++,
+								"org.freedesktop.DBus", "/org/freedesktop/DBus",
+								"org.freedesktop.DBus", "RemoveMatch", { rule });
+		Touch();
+		return true;
+	}
+	else
+		return MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus",
+						"org.freedesktop.DBus", "RemoveMatch", { rule });
 }
 
 bool DBusConnection::FetchProperty(const String& dest, const String& path, const String& iface,

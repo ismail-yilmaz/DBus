@@ -25,6 +25,7 @@ public:
     bool                BroadcastSignal(const String& path, const String& iface, const String& name, const DBusValueArray& args = {});
     
     bool                AddMatch(const String& rule, Event<const DBusMessage&> cb = Null);
+    bool                RemoveMatch(const String& rule);
 
     bool                FetchProperty(const String& dest, const String& path, const String& iface, const String& prop);
     
