@@ -13,6 +13,27 @@ struct EventLock {
 	~EventLock()                           { latch = prev; }
 };
 
+String ParseDBusAddress(String path, bool& abstract)
+{
+	abstract = false;
+
+	if(path.IsEmpty())
+		return path;
+
+	int pos = path.FindAfter("unix:abstract=");
+	if(pos >= 0)
+		abstract = true;
+	else
+		pos = path.FindAfter("unix:path=");
+
+	if(pos >= 0) {
+		path = path.Mid(pos);
+		if(int q = path.Find(','); q >= 0)
+			path = path.Left(q);
+	}
+
+	return path;
+}
 }
 
 const char* DBusConnection::GetMsg(int code)
@@ -67,6 +88,17 @@ bool DBusConnection::FsConnect()
 {
 	if(socket.ConnectFileSystem(buspath)) {
 		LLOG("Successfully connected to D-Bus at " << buspath);
+		return true;
+	}
+	else
+		SetError(CONNECTION_FAILED);
+	return false;
+}
+
+bool DBusConnection::AsConnect()
+{
+	if(socket.ConnectAbstract(buspath)) {
+		LLOG("Successfully connected to D-Bus (abstract) at " << buspath);
 		return true;
 	}
 	else
@@ -153,45 +185,46 @@ void DBusConnection::Check()
 		SetError(ABORTED);
 }
 
-bool DBusConnection::Connect(const String& path)
+bool DBusConnection::Connect(const String& path, bool abstract)
 {
 	buspath = path;
 	queue.Clear();
 	IsEof = [this] { return AuthIsEof(); };
 	queue.AddTail([this] { return Init(); });
-	queue.AddTail([this] { return FsConnect(); });
+
+	if(abstract)
+		queue.AddTail([this] { return AsConnect(); });
+	else
+		queue.AddTail([this] { return FsConnect(); });
+
 	queue.AddTail([this] { return AuthRequest(); });
 	return Run();
 }
 
 bool DBusConnection::ConnectSession()
 {
-	String path = GetEnv("DBUS_SESSION_BUS_ADDRESS");
-	if(int pos = path.FindAfter("unix:path="); pos >= 0) {
-		path = path.Mid(pos);
-		if(int q = path.Find(','); q >= 0)
-			path = path.Left(q);
-	}
-	else
-	if(path.IsEmpty())
+	bool abstract;
+	String path = ParseDBusAddress(GetEnv("DBUS_SESSION_BUS_ADDRESS"), abstract);
+
+	if(path.IsEmpty()) {
 		path = Format("/run/user/%d/bus", (int) getuid());
-	
-	return Connect(path);
+		abstract = false; // System defaults are standard file sockets
+	}
+
+	return Connect(path, abstract);
 }
 
 bool DBusConnection::ConnectSystem()
 {
-	String path = GetEnv("DBUS_SYSTEM_BUS_ADDRESS");
-	if(int pos = path.FindAfter("unix:path="); pos >= 0) {
-		path = path.Mid(pos);
-		if(int q = path.Find(','); q >= 0)
-			path = path.Left(q);
-	}
-	else
-	if(path.IsEmpty())
+	bool abstract;
+	String path = ParseDBusAddress(GetEnv("DBUS_SYSTEM_BUS_ADDRESS"), abstract);
+
+	if(path.IsEmpty()) {
 		path = "/var/run/dbus/system_bus_socket";
-		
-	return Connect(path);
+		abstract = false;
+	}
+
+	return Connect(path, abstract);
 }
 
 void DBusConnection::Disconnect()

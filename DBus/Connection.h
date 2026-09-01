@@ -9,7 +9,7 @@ public:
     DBusConnection&     NonBlocking(bool b = true)                      { async = b; return *this; }
     bool                IsBlocking() const                              { return IsNull(timeout);  }
 
-    bool                Connect(const String& path);
+    bool                Connect(const String& path, bool abstract = false);
     bool                ConnectSession();
     bool                ConnectSystem();
     void                Disconnect();
@@ -70,6 +70,7 @@ private:
     void                SetError(int code)                              { throw Error(code, GetMsg(code)); }
     bool                Init();
     bool                FsConnect();
+    bool                AsConnect();
     bool                Get();
     bool                Put();
     bool                Drain();

@@ -48,7 +48,8 @@ public:
     dword              GetSerial() const        { return header.serial; }
     const Header&      GetHeader() const        { return header; }
     const String&      GetRawData() const       { return data; }
-
+    const String&      operator~() const        { return data; }
+	
     FieldData          ParseFields() const;
     DBusValueArray     ParseBody() const;
     String             ParseString() const;

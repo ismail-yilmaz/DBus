@@ -60,6 +60,16 @@ Returns `*this for method chaining.&]
 (i.e., timeout is Null).&]
 [s3; &]
 [s4; &]
+[s5;:Upp`:`:DBusConnection`:`:Connect`(const String`&`,bool`): [@(0.0.255) bool] 
+[* Connect]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 path], [@(0.0.255) bool] 
+[*@3 abstract] [@(0.0.255) `=] [@(0.0.255) false])&]
+[s2;%% Connects directly to the D`-Bus UNIX domain socket at the 
+specified [%-*@3 path] . Executes socket initialization, SASL authentication, 
+and the Hello handshake. If [%-*@3 abstract] flag is true then 
+DBusConnection will first attempt to connect to abstract unix 
+socket endpoint. Returns true on success.&]
+[s3; &]
+[s4; &]
 [s5;:Upp`:`:DBusConnection`:`:Connect`(const String`&`): [@(0.0.255) bool] 
 [* Connect]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 path])&]
 [s2;%% Connects directly to the D`-Bus UNIX domain socket at the 
