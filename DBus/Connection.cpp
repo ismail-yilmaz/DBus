@@ -54,7 +54,7 @@ const char* DBusConnection::GetMsg(int code)
 
 DBusConnection::DBusConnection()
 : packlen(0)
-, outpacklen(0)
+, extpacklen(0)
 , status(IDLE)
 , starttime(0)
 , timeout(60000)
@@ -76,8 +76,8 @@ bool DBusConnection::Init()
 	socket.Timeout(0);
 	packet.Clear();
 	packlen = 0;
-	outpacket.Clear();
-	outpacklen = 0;
+	extpacket.Clear();
+	extpacklen = 0;
 	status = WORKING;
 	starttime = msecs();
 	dispatching = false;
@@ -142,29 +142,29 @@ bool DBusConnection::Drain()
 {
 	// Server "Put"
 	
-	if(!outpacket.GetCount()) {
-		outpacklen = 0;
+	if(!extpacket.GetCount()) {
+		extpacklen = 0;
 		return false;
 	}
 	while(!IsTimeout()) {
-		int n = outpacket.GetLength() - outpacklen;
+		int n = extpacket.GetLength() - extpacklen;
 		if(n <= 0) {
-			outpacket.Clear();
-			outpacklen = 0;
+			extpacket.Clear();
+			extpacklen = 0;
 			break;
 		}
-		n = socket.Put(~outpacket + outpacklen, n);
+		n = socket.Put(~extpacket + extpacklen, n);
 		if(n <= 0)
 			break;
-		outpacklen += n;
-		if(outpacklen == outpacket.GetLength()) {
-			outpacket.Clear();
-			outpacklen = 0;
+		extpacklen += n;
+		if(extpacklen == extpacket.GetLength()) {
+			extpacket.Clear();
+			extpacklen = 0;
 			break;
 		}
 		starttime = msecs();
 	}
-	return false;
+	return extpacket.GetCount() > 0;;
 }
 
 void DBusConnection::PutGet()
@@ -398,8 +398,7 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,
 bool DBusConnection::InitCall()
 {
 	LLOG("Starting method call...");
-	status = WORKING;
-	starttime = msecs();
+	Touch();
 	return true;
 }
 
@@ -479,12 +478,12 @@ bool DBusConnection::Do0()
 {
 	try {
 		Check();
-		Drain();
+		bool pending = Drain();
 		if(!queue.IsEmpty() && queue.Head()()) {
 			queue.DropHead();
 			starttime = msecs();
 		}
-		if(queue.IsEmpty()) {
+		if(queue.IsEmpty() && !pending) {
 			LLOG("DBus operation successful.");
 			status = FINISHED;
 		}
@@ -495,6 +494,8 @@ bool DBusConnection::Do0()
 		LLOG("Failed: " << e);
 		status = FAILED;
 		queue.Clear();
+		extpacket.Clear();
+		extpacklen = 0;
 		socket.ClearAbort();
 		error = MakeTuple<int, String>(e.code, e);
 	}
@@ -502,6 +503,8 @@ bool DBusConnection::Do0()
 		LLOG("Unknown exception.");
 		status = FAILED;
 		queue.Clear();
+		extpacket.Clear();
+		extpacklen = 0;
 		socket.ClearAbort();
 		error = MakeTuple<int, String>(EXCEPTION, GetMsg(-1));
 	}
@@ -547,13 +550,11 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 									const DBusValueArray& args)
 {
 	ASSERT(socket.IsOpen());
-	
-	packet = DBusMessage::CreateSignal(serial++, path, iface, name, args).GetRawData();
-	packlen = 0;
-	queue.Clear();
-	queue.AddTail([this] { return InitCall(); });
-	queue.AddTail([this] { return Put(); });
-	return Run();
+
+	// We are using a form of "side-banding" here...
+	extpacket << ~DBusMessage::CreateSignal(serial++, path, iface, name, args);
+	Touch();
+	return dispatching ? true : Run();
 }
 
 bool DBusConnection::RequestName(const String& name)
@@ -565,13 +566,15 @@ bool DBusConnection::RequestName(const String& name)
 void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& args)
 {
 	DBusMessage::FieldData fd = req.ParseFields();
-	outpacket.Cat(DBusMessage::CreateMethodReturn(serial++, req.GetSerial(), fd.sender, args).GetRawData());
+	extpacket << ~DBusMessage::CreateMethodReturn(serial++, req.GetSerial(), fd.sender, args);
+	Touch();
 }
 
 void DBusConnection::SendError(const DBusMessage& req, const String& errname, const String& errmsg)
 {
 	DBusMessage::FieldData fd = req.ParseFields();
-	outpacket.Cat(DBusMessage::CreateError(serial++, req.GetSerial(), fd.sender, errname, errmsg).GetRawData());
+	extpacket << ~DBusMessage::CreateError(serial++, req.GetSerial(), fd.sender, errname, errmsg);
+	Touch();
 }
 
 }

@@ -39,7 +39,7 @@ public:
     Event<const DBusMessage&> WhenMethodCall;
 
     Socket&             GetSocket()                                     { return socket; }
-    dword               GetWaitEvents() const                           { return WAIT_READ | !!(packet.GetCount() + outpacket.GetCount()) * WAIT_WRITE; }
+    dword               GetWaitEvents() const                           { return WAIT_READ | !!(packet.GetCount() + extpacket.GetCount()) * WAIT_WRITE; }
     DBusConnection&     AddTo(SocketWaitEvent& e)                       { e.Add(socket, GetWaitEvents()); return *this; }
 
     bool                IsError() const                                 { return status == FAILED; }
@@ -69,6 +69,7 @@ private:
     static const char*  GetMsg(int code);
     void                SetError(int code)                              { throw Error(code, GetMsg(code)); }
     bool                Init();
+    void                Touch()                                         { status = WORKING; starttime = msecs(); }
     bool                FsConnect();
     bool                AsConnect();
     bool                Get();
@@ -108,8 +109,8 @@ private:
     Socket              socket;
     String              packet;
     int                 packlen;
-    String              outpacket;
-    int                 outpacklen;
+    String              extpacket;
+    int                 extpacklen;
     String              buspath;
     int                 status;
     int                 starttime;
