@@ -55,6 +55,13 @@ private:
 	Value value;
 };
 
+struct DBusError : Exc {
+    int code;
+    DBusError() : Exc(Null), code(-1)                               {}
+    DBusError(const String& reason) : Exc(reason), code(-1)         {}
+    DBusError(int rc, const String& reason) : Exc(reason), code(rc) {}
+};
+    
 #include "Parser.h"
 #include "Message.h"
 #include "Connection.h"

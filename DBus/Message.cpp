@@ -278,7 +278,7 @@ void MarshalParams(String& body, String& signature, const DBusValueArray& args)
 void SkipSignature(BParser& sigbp, int depth = 0)
 {
 	if(depth > 32)
-		throw Exc("D-Bus signature recursion limit exceeded.");
+		throw DBusError("D-Bus signature recursion limit exceeded.");
 
 	if(!sigbp.IsAvail(1))
 		return;
@@ -301,7 +301,7 @@ void SkipSignature(BParser& sigbp, int depth = 0)
 DBusValue ParseType(BParser& bp, BParser& sigbp, int depth = 0)
 {
 	if(depth > 32)
-		throw Exc("D-Bus container recursion limit exceeded.");
+		throw DBusError("D-Bus container recursion limit exceeded.");
 
 	if(!sigbp.IsAvail(1))
 		return Null;
@@ -446,7 +446,7 @@ DBusMessage::DBusMessage()
 }
 
 DBusMessage::DBusMessage(const String& rawdata)
-	: data(rawdata)
+: data(rawdata)
 {
 	Zero(header);
 	if(BParser bp(data); bp.IsAvail(16)) {
@@ -459,6 +459,12 @@ DBusMessage::DBusMessage(const String& rawdata)
 		header.serial = bp.ReadDword();
 		header.fieldslen = bp.ReadDword();
 	}
+}
+
+DBusMessage::DBusMessage(const Nuller&)
+{
+	Zero(header);
+	data = Null;
 }
 
 DBusMessage DBusMessage::Create(byte type, byte flags, dword serial, String fields, const DBusValueArray& args)
@@ -476,9 +482,11 @@ DBusMessage DBusMessage::Create(byte type, byte flags, dword serial, String fiel
 		fields.Cat(0);
 		AppendAlign(fields, 4);
 
-		if(signature.GetLength() > 255)
-			throw Exc("D-Bus signature exceeds 255 byte specification limit.");
-
+		if(signature.GetLength() > 255) {
+			RLOG("D-Bus signature exceeds 255 byte specification limit.");
+			return Null;
+		}
+		
 		byte siglen = (byte) signature.GetLength();
 		fields.Cat(siglen);
 		fields.Cat(signature);
@@ -634,7 +642,7 @@ DBusMessage::FieldData DBusMessage::ParseFields() const
 	catch(const BParser::Error& e) {
 		LLOG("ParseFields() failed: " << e);
 	}
-	catch(const Exc& e) {
+	catch(const DBusError& e) {
 		LLOG("ParseFields() failed: " << e);
 	}
 
@@ -667,7 +675,7 @@ DBusValueArray DBusMessage::ParseBody() const
 	catch(const BParser::Error& e) {
 		LLOG("ParseBody() failed: " << e);
 	}
-	catch(const Exc& e) {
+	catch(const DBusError& e) {
 		LLOG("ParseBody() failed: " << e);
 	}
 
@@ -749,7 +757,7 @@ Vector<String> DBusMessage::ParseStringArray() const
 	catch(const BParser::Error& e) {
 		LLOG("ParseStringArray() failed: " << e);
 	}
-	catch(const Exc& e) {
+	catch(const DBusError& e) {
 		LLOG("ParseStringArray() failed: " << e);
 	}
 
@@ -774,7 +782,7 @@ String DBusMessage::ParseString() const
 		LLOG("ParseString() failed: " << e);
 		return String::GetVoid();
 	}
-	catch(const Exc& e) {
+	catch(const DBusError& e) {
 		LLOG("ParseString() failed: " << e);
 		return String::GetVoid();
 	}

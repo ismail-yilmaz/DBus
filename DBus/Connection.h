@@ -32,6 +32,8 @@ public:
     bool                Do()                                            { ASSERT(async); return Do0(); }
     Event<>             WhenDo;
 
+	bool                InProgress() const                              { return status == WORKING; }
+	
 	void                Abort()                                         { socket.Abort();  }
 	
     const DBusMessage&  GetMessage() const                              { return replymsg; }
@@ -40,7 +42,7 @@ public:
     Event<const DBusMessage&> WhenMethodCall;
 
     Socket&             GetSocket()                                     { return socket; }
-    dword               GetWaitEvents() const                           { return WAIT_READ | !!(packet.GetCount() + extpacket.GetCount()) * WAIT_WRITE; }
+    dword               GetWaitEvents() const                           { return WAIT_READ | !!extpacket.GetCount() * WAIT_WRITE; }
     DBusConnection&     AddTo(SocketWaitEvent& e)                       { e.Add(socket, GetWaitEvents()); return *this; }
 
     bool                IsError() const                                 { return status == FAILED; }
@@ -59,16 +61,10 @@ public:
         EXCEPTION = -1,
    };
 
-    struct Error : Exc {
-        int code;
-        Error() : Exc(Null), code(-1) {}
-        Error(const String& reason) : Exc(reason), code(-1) {}
-        Error(int rc, const String& reason) : Exc(reason), code(rc) {}
-    };
-
 private:
     static const char*  GetErrorMsg(int code);
-    void                SetError(int code)                              { throw Error(code, GetErrorMsg(code)); }
+    void                ThrowError(int code)                            { throw DBusError(code, GetErrorMsg(code)); }
+    void                SetError(int code, const String& reason);
     bool                Init();
     void                Touch()                                         { status = WORKING; starttime = msecs(); }
     bool                FsConnect();
@@ -102,6 +98,8 @@ private:
     
     bool                MsgIsEof();
     DBusMessage         ExtractMessage();
+    
+    void                RestoreMatches();
     
     enum State          { IDLE, WORKING, FINISHED, FAILED };
 

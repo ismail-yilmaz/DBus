@@ -29,6 +29,12 @@ and unmarshaling of the D`-Bus binary wire format.&]
 st] String[@(0.0.255) `&] [*@3 rawdata])&]
 [s2;%% Constructor overload. Initializes and parses a D`-Bus message 
 directly from raw binary socket data.&]
+[s3;%% &]
+[s4; &]
+[s5;:Upp`:`:DBusMessage`:`:DBusMessage`(const Nuller`&`): [* DBusMessage]([@(0.0.255) con
+st] Nuller[@(0.0.255) `&])&]
+[s2;%% Null constructor. Constructs a Null message.&]
+[s3; &]
 [s3; &]
 [ {{10000F(128)G(128)@1 [s0;%% [* Public Method List]]}}&]
 [s3; &]
@@ -46,7 +52,8 @@ receiving service (e.g., [C `"][C@5 org.freedesktop.Notifications][C `"]).
 the interface containing the method. [*@3 method ]is the exact 
 method name. [*@3 args ][C c]ontains optional payload parameters, 
 which are automatically marshaled into the binary message body 
-alongside their generated D`-Bus signatures[C .]&]
+alongside their generated D`-Bus signatures[C .] Returns [@(0.128.128) Null 
+]on failure.&]
 [s2;%% &]
 [s3; &]
 [s4; &]
@@ -59,7 +66,8 @@ of a remote call. [*@3 serial ]is the unique identifier for this
 new outgoing message. [*@3 replyserial ]must exactly match the 
 serial number of the incoming method call being answered. [*@3 dest 
 ]is the unique bus name of the original caller. [*@3 args ]contains 
-the return values to be serialized into the payload body.&]
+the return values to be serialized into the payload body. Returns 
+[@(0.128.128) Null ]on failure.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:CreateSignal`(dword`,const String`&`,const String`&`,const String`&`,const DBusValueArray`&`): [@(0.0.255) s
@@ -68,12 +76,13 @@ tatic] DBusMessage [* CreateSignal]([@(0.128.128) dword ][*@3 serial],
 String[@(0.0.255) `&] [*@3 iface], [@(0.0.255) const] String[@(0.0.255) `&] 
 [*@3 name], [@(0.0.255) const] DBusValueArray[@(0.0.255) `&] args `= 
 `{`})&]
-[s2;%% [%- Constructs a signal message for bus`-wide broadcasting. 
-][%-*@3 serial ][%- is the unique identifier for this message. ][%-*@3 path 
-][%- is the local object path emitting the signal. ][%-*@3 iface 
-][%- is the interface defining the signal. ][%-*@3 name ][%- is the 
-signal name. ][%-*@3 args ]contains the optional signal payload. 
-Unlike method calls, signals do not specify a destination field.&]
+[s2; Constructs a signal message for bus`-wide broadcasting. [*@3 serial 
+]is the unique identifier for this message. [*@3 path ]is the local 
+object path emitting the signal. [*@3 iface ]is the interface defining 
+the signal. [*@3 name ]is the signal name. [*@3 args ][%% contains 
+the optional signal payload. Unlike method calls, signals do 
+not specify a destination field. ]Returns [@(0.128.128) Null ]on 
+failure.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:CreateError`(dword`,dword`,const String`&`,const String`&`,const String`&`): [@(0.0.255) s
@@ -81,14 +90,15 @@ tatic] DBusMessage [* CreateError]([@(0.128.128) dword ][*@3 serial],
 dword [*@3 replyserial], [@(0.0.255) const] String[@(0.0.255) `&] [*@3 dest], 
 [@(0.0.255) const] String[@(0.0.255) `&] [*@3 errname], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 errmsg])&]
-[s2;%% Constructs an error message rejecting an incoming method call. 
-[%-*@3 serial ]is the unique identifier for this message. [%-*@3 replyserial 
-]must exactly match the serial number of the incoming method 
-call. [%-*@3 dest ]is the unique bus name of the original caller. 
-[%-*@3 errname ]is the fully qualified D`-Bus error name (e.g., 
-`"[C@5 org.freedesktop.DBus.Error.UnknownMethod]`"). [%-*@3 errmsg 
-]is an optional human`-readable description appended as a single 
-string argument in the message body.&]
+[s2; [%% Constructs an error message rejecting an incoming method call. 
+][*@3 serial ][%% is the unique identifier for this message. ][*@3 replyserial 
+][%% must exactly match the serial number of the incoming method 
+call. ][*@3 dest ][%% is the unique bus name of the original caller. 
+][*@3 errname ][%% is the fully qualified D`-Bus error name (e.g., 
+`"][%%C@5 org.freedesktop.DBus.Error.UnknownMethod][%% `"). ][*@3 errmsg 
+][%% is an optional human`-readable description appended as a single 
+string argument in the message body. ]Returns [@(0.128.128) Null 
+]on failure.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:IsOK`(`)const: [@(0.0.255) bool] [* IsOK]() 
@@ -116,6 +126,13 @@ string argument in the message body.&]
 [s2;%% Returns true if the message type is error.&]
 [s3; &]
 [s4; &]
+[s5;:Upp`:`:DBusMessage`:`:IsNullInstance`(`)const: [@(0.0.255) bool] 
+[* IsNullInstance]() [@(0.0.255) const]&]
+[s2;%% Returns true if the message is in invalid state. This is useful 
+for detecting message creation errors. All default constructed 
+DBusMessage instances are in invalid (Null) state.&]
+[s3; &]
+[s4; &]
 [s5;:Upp`:`:DBusMessage`:`:GetType`(`)const: Type [* GetType]() [@(0.0.255) const]&]
 [s2;%% Returns the message type. Can be one of the following: [C@5 METHOD`_CALL], 
 [C@5 METHOD`_RETURN], [C@5 ERROR], [C@5 SIGNAL].&]
@@ -128,12 +145,17 @@ string argument in the message body.&]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:GetHeader`(`)const: [@(0.0.255) const] Header[@(0.0.255) `&] 
 [* GetHeader]() [@(0.0.255) const]&]
-[s2;%% Returns the parsed 16`-byte fixed header structure.&]
+[s2;%% Returns a constant reference to the parsed 16`-byte fixed 
+header structure.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:GetRawData`(`)const: [@(0.0.255) const] 
 String[@(0.0.255) `&] [* GetRawData]() [@(0.0.255) const]&]
-[s2;%% Returns the underlying raw binary data of the message.&]
+[s5;:Upp`:`:DBusMessage`:`:operator`~`(`)const:%% [%-@(0.0.255) const][%-  
+String][%-@(0.0.255) `&][%-  ][%-@(0.0.255) operator][%- `~() ][%-@(0.0.255) const] 
+.&]
+[s2;%% Returns a constant reference to the underlying raw binary 
+data of the message.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:ParseFields`(`)const: FieldData [* ParseFields]() 

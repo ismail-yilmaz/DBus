@@ -8,6 +8,10 @@ namespace Upp {
 namespace {
 
 constexpr const dword DBUS_SIZECAP = 128 * (1024 * 1024); // 128 MiB, max len.
+constexpr const char *DBUS_NAME    = "org.freedesktop.DBus";
+constexpr const char *DBUS_PATH    = "/org/freedesktop/DBus";
+constexpr const char *DBUS_IFACE   = "org.freedesktop.DBus";
+constexpr const char *DBUS_PROP    = "org.freedesktop.DBus.Properties";
 
 struct EventLock {
 	bool& latch,  prev;
@@ -92,7 +96,7 @@ bool DBusConnection::FsConnect()
 		LLOG("Successfully connected to D-Bus at " << buspath);
 		return true;
 	}
-	SetError(CONNECTION_FAILED);
+	ThrowError(CONNECTION_FAILED);
 	return false;
 }
 
@@ -102,7 +106,7 @@ bool DBusConnection::AsConnect()
 		LLOG("Successfully connected to D-Bus (abstract) at " << buspath);
 		return true;
 	}
-	SetError(CONNECTION_FAILED);
+	ThrowError(CONNECTION_FAILED);
 	return false;
 }
 
@@ -177,7 +181,7 @@ void DBusConnection::PutGet()
 void DBusConnection::Check(const String& s)
 {
 	if(s.GetLength() > DBUS_SIZECAP)
-		SetError(INVALID_PACKET);
+		ThrowError(INVALID_PACKET);
 }
 
 void DBusConnection::Check()
@@ -185,11 +189,11 @@ void DBusConnection::Check()
 	if(status != WORKING)
 		return;
 	if(IsTimeout())
-		SetError(CONNECTION_TIMED_OUT);
+		ThrowError(CONNECTION_TIMED_OUT);
 	if(socket.IsError())
-		SetError(SOCKET_FAILURE);
+		ThrowError(SOCKET_FAILURE);
 	if(socket.IsAbort())
-		SetError(ABORTED);
+		ThrowError(ABORTED);
 }
 
 bool DBusConnection::Connect(const String& path, bool abstract)
@@ -236,11 +240,15 @@ bool DBusConnection::ConnectSystem()
 
 void DBusConnection::Disconnect()
 {
-	LLOG("Disconnecting...");
-	if(socket.IsOpen())
-		socket.Close();
-	status = IDLE;
-	packet.Clear();
+    LLOG("Disconnecting...");
+    if(socket.IsOpen())
+        socket.Close();
+    status = IDLE;
+    packet.Clear();
+    packlen = 0;
+    extpacket.Clear();
+    extpacklen = 0;
+    queue.Clear();
 }
 
 bool DBusConnection::AuthRequest()
@@ -279,7 +287,7 @@ bool DBusConnection::AuthParse()
 {
 	LLOG("<< AUTH: Reply received.");
 	LDUMPHEX(packet);
-	
+
 	if(packet.StartsWith("OK")) {
 		packet = "BEGIN\r\n";
 		packlen = 0;
@@ -289,18 +297,14 @@ bool DBusConnection::AuthParse()
 		return true;
 	}
 
-	SetError(AUTH_FAILED);
+	ThrowError(AUTH_FAILED);
 	return false;
 }
 
 bool DBusConnection::HelloRequest()
 {
 	LLOG("Starting Hello request...");
-	packet = ~DBusMessage::CreateMethodCall(serial++,
-								"org.freedesktop.DBus",
-								"/org/freedesktop/DBus",
-								"org.freedesktop.DBus",
-								"Hello");
+	packet = ~DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "Hello");
 	packlen = 0;
 
 	LLOG(">> HELLO: Sending request.");
@@ -337,10 +341,11 @@ bool DBusConnection::HelloParse()
 	if(msg.IsMethodReturn()) {
 		uniquename = msg.ParseString();
 		LLOG("Hello successful, unique name: " << uniquename);
+		RestoreMatches();
 		return true;
 	}
 
-	SetError(HELLO_FAILED);
+	ThrowError(HELLO_FAILED);
 	return false;
 }
 
@@ -358,14 +363,14 @@ bool DBusConnection::GetMessageLength(int& tot)
 	dword flds = bp.ReadDword();
 
 	if(flds > DBUS_SIZECAP || body > DBUS_SIZECAP)
-		SetError(INVALID_PACKET);
+		ThrowError(INVALID_PACKET);
 
 	int64 hdr = 16 + (int64) flds;
 	int64 pad = (hdr % 8 != 0) ? 8 - (hdr % 8) : 0;
 	int64 total = hdr + pad + (int64) body;
 
 	if(total > DBUS_SIZECAP)
-		SetError(INVALID_PACKET);
+		ThrowError(INVALID_PACKET);
 
 	tot = (int) total;
 
@@ -383,7 +388,8 @@ bool DBusConnection::MsgIsEof()
 DBusMessage DBusConnection::ExtractMessage()
 {
 	int total;
-	GetMessageLength(total);
+	if(!GetMessageLength(total))
+		return Null;
 	String res = packet.Left(total);
 	packet.Remove(0, total);
 	return DBusMessage(res);
@@ -397,13 +403,16 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,
 	ASSERT_(!dispatching, "FATAL: Reentrant synchronous D-Bus call detected inside a callback!");
 
 	if(dispatching) {
-		RLOG("!!!Aborting!!! Synchronous MethodCall attempted inside an active IPC callback.");
+		RLOG("Aborting. Synchronous MethodCall attempted inside an active IPC callback.");
 		return false;
 	}
 
-	replymsg = DBusMessage();
+	replymsg = Null;
 	callserial = serial++;
-	packet = ~DBusMessage::CreateMethodCall(callserial, dest, path, iface, method, args);
+	DBusMessage msg = DBusMessage::CreateMethodCall(callserial, dest, path, iface, method, args);
+	if(IsNull(msg))
+		return false;
+	packet = ~msg;
 	packlen = 0;
 	queue.Clear();
 	IsEof = [this] { return MethodIsEof(); };
@@ -493,40 +502,31 @@ bool DBusConnection::ListenIsEof()
 
 bool DBusConnection::Do0()
 {
-	try {
-		Check();
-		bool pending = Drain();
-		if(!queue.IsEmpty() && queue.Head()()) {
-			queue.DropHead();
-			starttime = msecs();
-		}
-		if(queue.IsEmpty() && !pending) {
-			LLOG("DBus operation successful.");
-			status = FINISHED;
-		}
-		else
-			WhenDo();
-	}
-	catch(const Error& e) {
-		LLOG("Failed: " << e);
-		status = FAILED;
-		queue.Clear();
-		extpacket.Clear();
-		extpacklen = 0;
-		socket.ClearAbort();
-		error = MakeTuple<int, String>(e.code, e);
-	}
-	catch(...) {
-		LLOG("Unknown exception.");
-		status = FAILED;
-		queue.Clear();
-		extpacket.Clear();
-		extpacklen = 0;
-		socket.ClearAbort();
-		error = MakeTuple<int, String>(EXCEPTION, GetErrorMsg(-1));
-	}
+    try {
+        Check();
+        Drain();
+        if(!queue.IsEmpty() && queue.Head()()) {
+            queue.DropHead();
+            starttime = msecs();
+        }
+        bool pending = Drain();
+        if(queue.IsEmpty() && !pending) {
+            LLOG("DBus operation successful.");
+            status = FINISHED;
+        }
+        else
+            WhenDo();
+    }
+    catch(const DBusError& e) {
+        LLOG("Failed: " << e);
+        SetError(e.code, e);
+    }
+    catch(...) {
+        LLOG("Unknown exception.");
+        SetError(EXCEPTION, GetErrorMsg(-1));
+    }
 
-	return status == WORKING;
+    return status == WORKING;
 }
 
 bool DBusConnection::Run()
@@ -542,6 +542,18 @@ bool DBusConnection::Run()
 	return !IsError();
 }
 
+void DBusConnection::SetError(int code, const String& reason)
+{
+    status = FAILED;
+    queue.Clear();
+    packet.Clear();
+    packlen = 0;
+    extpacket.Clear();
+    extpacklen = 0;
+    socket.ClearAbort();
+    error = MakeTuple<int, String>(code, reason);
+}
+
 bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 {
 	if(cb) {
@@ -554,15 +566,15 @@ bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 		return true;
 
 	if(dispatching) {
-		extpacket << ~DBusMessage::CreateMethodCall(serial++,
-								"org.freedesktop.DBus", "/org/freedesktop/DBus",
-								"org.freedesktop.DBus", "AddMatch", { rule });
+		DBusMessage msg = DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", { rule });
+		if(IsNull(msg))
+			return false;
+		extpacket.Cat(~msg);
 		Touch();
 		return true;
 	}
 	else
-		return MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus",
-						"org.freedesktop.DBus", "AddMatch", { rule });
+		return MethodCall(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", { rule });
 }
 
 bool DBusConnection::RemoveMatch(const String& rule)
@@ -573,52 +585,74 @@ bool DBusConnection::RemoveMatch(const String& rule)
 		return true;
 
 	if(dispatching) {
-		extpacket << ~DBusMessage::CreateMethodCall(serial++,
-								"org.freedesktop.DBus", "/org/freedesktop/DBus",
-								"org.freedesktop.DBus", "RemoveMatch", { rule });
+		DBusMessage msg = DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RemoveMatch", { rule });
+		if(IsNull(msg))
+			return false;
+		extpacket.Cat(~msg);
 		Touch();
 		return true;
 	}
 	else
-		return MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus",
-						"org.freedesktop.DBus", "RemoveMatch", { rule });
+		return MethodCall(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RemoveMatch", { rule });
+}
+
+void DBusConnection::RestoreMatches()
+{
+	if(signalmatches.IsEmpty())
+		return;
+	for(const SignalMatch& sm : signalmatches)
+		extpacket << ~DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", { sm.rule });
+	LLOG("Sent server-side match rules: " << signalmatches.GetCount());
+	Touch();
 }
 
 bool DBusConnection::FetchProperty(const String& dest, const String& path, const String& iface,
-									const String& prop)
+																			const String& prop)
 {
-	return MethodCall(dest, path, "org.freedesktop.DBus.Properties", "Get", { iface, prop });
+	return MethodCall(dest, path, DBUS_PROP, "Get", { iface, prop });
 }
 
 bool DBusConnection::BroadcastSignal(const String& path, const String& iface, const String& name,
-									const DBusValueArray& args)
+																	const DBusValueArray& args)
 {
 	ASSERT(socket.IsOpen());
 
-	// We are using a form of "side-banding" here...
-	extpacket << ~DBusMessage::CreateSignal(serial++, path, iface, name, args);
+	DBusMessage msg = DBusMessage::CreateSignal(serial++, path, iface, name, args);
+	if(IsNull(msg))
+		return false;
+	extpacket.Cat(~msg);
 	Touch();
 	return dispatching ? true : Run();
 }
 
 bool DBusConnection::RequestName(const String& name)
 {
-	return MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus",
-					"org.freedesktop.DBus", "RequestName", { name, (uint32) 3 });
+	return MethodCall(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RequestName", { name, (uint32) 3 });
 }
 
 void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& args)
 {
+	ASSERT(socket.IsOpen());
+
 	DBusMessage::FieldData fd = req.ParseFields();
-	extpacket << ~DBusMessage::CreateMethodReturn(serial++, req.GetSerial(), fd.sender, args);
+	DBusMessage msg = DBusMessage::CreateMethodReturn(serial++, req.GetSerial(), fd.sender, args);
+	if(IsNull(msg))
+		return;
+	extpacket.Cat(~msg);
 	Touch();
 }
 
 void DBusConnection::SendError(const DBusMessage& req, const String& errname, const String& errmsg)
 {
+	ASSERT(socket.IsOpen());
+
 	DBusMessage::FieldData fd = req.ParseFields();
-	extpacket << ~DBusMessage::CreateError(serial++, req.GetSerial(), fd.sender, errname, errmsg);
+	DBusMessage msg =  DBusMessage::CreateError(serial++, req.GetSerial(), fd.sender, errname, errmsg);
+	if(IsNull(msg))
+		return;
+	extpacket.Cat(~msg);
 	Touch();
+
 }
 
 }
