@@ -730,6 +730,62 @@ void TestRoundtripReMarshal()
     TEST_CHECK_EQ(bodybytes1, bodybytes2);
 }
 
+void TestSignatureLengthGuard()
+{
+    RLOG("Running Signature Length Guard Tests...");
+
+    // DBusMessage's Null-object pattern, directly: a Null-constructed
+    // message must report null, and must not be confused with a
+    // legitimately empty (but valid) message.
+    DBusMessage nullmsg = Null;
+    TEST_CHECK(IsNull(nullmsg));
+
+    DBusMessage emptyargs = DBusMessage::CreateMethodCall(500, "d", "/p", "i", "m");
+    TEST_CHECK(!IsNull(emptyargs));
+
+    // Exactly 255 'u' signature characters (right at the D-Bus spec's
+    // signature length cap) must still succeed and round-trip cleanly.
+    DBusValueArray exactargs;
+    for(int i = 0; i < 255; i++)
+        exactargs.Add((uint32) i);
+
+    DBusMessage justfits = DBusMessage::CreateMethodCall(501, "com.test", "/big", "com.test.Big", "JustFits", exactargs);
+    TEST_CHECK(!IsNull(justfits));
+
+    DBusMessage p_fits(justfits.GetRawData());
+    TEST_CHECK_EQ(p_fits.ParseFields().signature.GetLength(), 255);
+    TEST_CHECK_EQ(p_fits.ParseBody().GetCount(), 255);
+
+    // One 'u' over the limit: Create() must refuse rather than silently
+    // truncating the length byte and desyncing the wire format.
+    DBusValueArray toomanyargs;
+    for(int i = 0; i < 256; i++)
+        toomanyargs.Add((uint32) i);
+
+    DBusMessage toolong = DBusMessage::CreateMethodCall(502, "com.test", "/big", "com.test.Big", "TooMany", toomanyargs);
+    TEST_CHECK(IsNull(toolong));
+}
+
+void TestRecursionDepthGuard()
+{
+    RLOG("Running Recursion Depth Guard Tests...");
+
+	// Allowed max: 32
+    DBusValue deep = (int32) 42;
+    for(int i = 0; i < 40; i++) {
+        DBusValueStruct s;
+        s.Add(deep);
+        deep = s;
+    }
+
+    DBusMessage msg = DBusMessage::CreateSignal(503, "/deep", "com.test", "Nested", { deep });
+    TEST_CHECK(!IsNull(msg));
+
+    DBusMessage parsed(msg.GetRawData());
+
+    TEST_CHECK(parsed.ParseBody().GetCount() == 0);
+}
+
 CONSOLE_APP_MAIN
 {
     StdLogSetup(LOG_FILE | LOG_COUT);
@@ -750,6 +806,8 @@ CONSOLE_APP_MAIN
     TestDeepVariantMapNesting();
     TestMixedTopLevelAlignment();
     TestRoundtripReMarshal();
+    TestSignatureLengthGuard();
+    TestRecursionDepthGuard();
 
     RLOG("=========================================");
     RLOG("Tests Passed: " << passed_tests);
