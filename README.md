@@ -49,6 +49,7 @@ The DBus nest ships with ready-to-run interactive examples demonstrating both cl
 | :--- | :--- |
 | **Method** | A basic example demonstrating D-Bus method calls. |
 | **Notify** | A minimal client application demonstrating how to trigger a native desktop notification using a simple blocking method call. |
+| **FileChooser** | Demonstrates D-Bus native file chooser integration using desktop portal. |
 | **Monitor** | An asynchronous listener that subscribes to system-wide D-Bus broadcast signals and logs them to the console in real-time. |
 | **Marshall** | Demonstrates how to marshall complex, poymorphic D-Bus data easily. |
 | **Properties** | Demonstrates how to query and parse complex nested structures using the standard `org.freedesktop.DBus.Properties` interface. |
