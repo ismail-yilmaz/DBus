@@ -33,6 +33,8 @@ public:
     Event<>             WhenDo;
 
 	bool                InProgress() const                              { return socket.IsOpen() && status == WORKING; }
+	bool                IsSuccess() const                               { return status == FINISHED; }
+	bool                IsFailure() const                               { return status == FAILED; }
 	
 	void                Finish()                                        { status = FINISHED; Abort(); }
 	void                Abort()                                         { socket.Abort(); }
