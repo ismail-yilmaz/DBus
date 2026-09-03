@@ -32,9 +32,10 @@ public:
     bool                Do()                                            { ASSERT(async); return Do0(); }
     Event<>             WhenDo;
 
-	bool                InProgress() const                              { return status == WORKING; }
+	bool                InProgress() const                              { return socket.IsOpen() && status == WORKING; }
 	
-	void                Abort()                                         { socket.Abort();  }
+	void                Finish()                                        { status = FINISHED; Abort(); }
+	void                Abort()                                         { socket.Abort(); }
 	
     const DBusMessage&  GetMessage() const                              { return replymsg; }
     

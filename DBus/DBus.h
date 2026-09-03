@@ -10,22 +10,18 @@ struct DBusValue;
 
 struct DBusValueMap : public VectorMap<String, DBusValue> {
     using VectorMap<String, DBusValue>::VectorMap;
-    using VectorMap<String, DBusValue>::operator=;
     DBusValueMap(const DBusValueMap& v) : VectorMap<String, DBusValue>(v, 1) {}
 };
 
 struct DBusValueArray : public Vector<DBusValue> {
     using Vector<DBusValue>::Vector;
-    using Vector<DBusValue>::operator=;
     DBusValueArray(const DBusValueArray& v) : Vector<DBusValue>(v, 1) {}
 };
 
 struct DBusValueStruct : public Vector<DBusValue> {
     using Vector<DBusValue>::Vector;
-    using Vector<DBusValue>::operator=;
     DBusValueStruct(const DBusValueStruct& v) : Vector<DBusValue>(v, 1) {}
 };
-
 
 class DBusValue : public Moveable<DBusValue>  {
 public:
@@ -44,7 +40,7 @@ public:
     DBusValue(const Nuller& v) : value(v)                     {}
     DBusValue(const DBusValueMap& v) : value(RawToValue(v))   {}
     DBusValue(const DBusValueArray& v) : value(RawToValue(v)) {}
-    DBusValue(const DBusValueStruct& v) : value(RawToValue(v)) {}
+    DBusValue(const DBusValueStruct& v) : value(RawToValue(v)){}
     
     bool IsNullInstance() const                               { return value.IsNull(); }
     template<typename T>  bool     Is() const                 { return value.Is<T>(); }
