@@ -15,8 +15,16 @@ trTR("Dosya Kaydet")
 T_("Select Folder")
 trTR("Klas\303\266r Se\303\247")
 
-
 // FileChooser.cpp
+
+T_("Failed to request FileChooser: ")
+trTR("FileChooser iste\304\237i ba\305\237ar\304\261s\304\261z oldu: ")
+
+T_("FileChooser portal rejected the request: ")
+trTR("FileChooser portal\304\261 iste\304\237i reddetti: ")
+
+T_("FileChooser portal returned an empty reply.")
+trTR("FileChooser portal\304\261 bo\305\237 bir yan\304\261t d\303\266nd\303\274rd\303\274.")
 
 T_("Images")
 trTR("Resimler")
@@ -24,15 +32,14 @@ trTR("Resimler")
 T_("Text")
 trTR("Metin")
 
-T_("Select Image File")
-trTR("Resim Dosyas\304\261 Se\303\247")
+T_("Select File")
+trTR("Dosya Se\303\247")
 
 T_("Selected: ")
-trTR("Se\303\247ilen dosya: ")
+trTR("Se\303\247ilen: ")
 
 T_("Selection cancelled or failed.")
 trTR("Se\303\247im iptal edildi veya ba\305\237ar\304\261s\304\261z oldu.")
-
 
 // PACKAGE 'DBus' FILE 'Connection.cpp'
 

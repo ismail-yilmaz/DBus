@@ -1,6 +1,5 @@
-#ifndef _DBusFileSelector_h_
-#define _DBusFileSelector_h_
-
+#ifndef _FileChooser_h_
+#define _FileChooser_h_
 
 #include <DBus/DBus.h>
 

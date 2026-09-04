@@ -60,11 +60,20 @@ bool DBusFileSel::DoExecute(const char *method, const String& title, bool asdir)
 		options.Add("filters", BuildFilters(types));
 
 	if(!dbus.MethodCall(PORTAL_NAME, PORTAL_PATH, PORTAL_IFACE, method, { "", title, options })) {
-		RLOG("Failed to request FileChooser: " << dbus.GetMessage().GetErrorDesc());
+		RLOG(t_("Failed to request FileChooser: ") << dbus.GetErrorDesc());
 		return false;
 	}
-
-	String reqpath = dbus.GetMessage().ParseBody()[0];
+	if(dbus.GetMessage().IsError()) {
+		RLOG(t_("FileChooser portal rejected the request: ") << dbus.GetMessage().GetErrorDesc());
+		return false;
+	}
+	DBusValueArray reply = dbus.GetMessage().ParseBody();
+	if(reply.GetCount() == 0) {
+		RLOG(t_("FileChooser portal returned an empty reply."));
+		return false;
+	}
+	
+	String reqpath = reply[0];
 	String match = Format("type='signal',interface='org.freedesktop.portal.Request',path='%s'", reqpath);
 
 	dbus.AddMatch(match, [&](const DBusMessage& msg) {
@@ -106,7 +115,7 @@ CONSOLE_APP_MAIN
 	  .Multi()
 	  .ActiveDir(GetHomeDirectory());
 
-	if(fs.ExecuteOpen(t_("Select Image File"))) {
+	if(fs.ExecuteOpen(t_("Select File"))) {
 		for(const String& s : fs.GetFiles())
 			RLOG(t_("Selected: ") << s);
 	}
