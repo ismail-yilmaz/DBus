@@ -1,9 +1,14 @@
 #include "DBus.h"
 
-#define LLOG(x)      //   RLOG("D-Bus: " << x)
-#define LDUMPHEX(x)  //   RDUMPHEX(x)
-
 namespace Upp {
+
+namespace UPPDBUS {
+bool trace = false;
+bool beverbose = false;
+}
+
+#define LLOG(x)       do { if(UPPDBUS::trace) RLOG("DBusConnection: " << x); } while(false)
+#define LDUMPHEX(x)	  do { if(UPPDBUS::beverbose) RDUMPHEX(x); } while(false)
 
 namespace {
 
@@ -198,6 +203,11 @@ void DBusConnection::Check()
 
 bool DBusConnection::Connect(const String& path, bool abstract)
 {
+	if(InProgress()) {
+		LLOG("Aborting. Connect attempted while a previous operation is still in progress.");
+		return false;
+	}
+
 	buspath = path;
 	queue.Clear();
 	IsEof = [this] { return AuthIsEof(); };
@@ -400,10 +410,14 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,
 								const DBusValueArray& args)
 {
 	ASSERT(socket.IsOpen());
-	ASSERT_(!dispatching, "FATAL: Reentrant synchronous D-Bus call detected inside a callback!");
 
 	if(dispatching) {
-		RLOG("Aborting. Synchronous MethodCall attempted inside an active IPC callback.");
+		LLOG("Aborting. Synchronous MethodCall attempted inside an active IPC callback.");
+		return false;
+	}
+
+	if(InProgress()) {
+		LLOG("Aborting. MethodCall attempted while a previous operation is still in progress.");
 		return false;
 	}
 
@@ -477,6 +491,11 @@ bool DBusConnection::MethodIsEof()
 
 void DBusConnection::Listen()
 {
+	if(InProgress()) {
+		LLOG("Aborting. Listen attempted while a previous operation is still in progress.");
+		return;
+	}
+	
 	queue.Clear();
 	IsEof = [this] { return ListenIsEof(); };
 	queue.AddTail([this] { return InitCall(); });

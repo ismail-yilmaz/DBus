@@ -37,7 +37,9 @@ error dispatching.&]
 [s2;%% Sets the operation timeout in milliseconds. Acts as an idle 
 transfer tracker (resets as bytes flow). Default timeout value 
 is 60000 milliseconds (one minute). Returns `*this for method 
-chaining.&]
+chaining. Timeout can be set to Null if no timeout is desired 
+(e.g. for [^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection`:`:Listen`(`)^ L
+isten()])&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:WaitStep`(int`): DBusConnection[@(0.0.255) `&] 
@@ -67,14 +69,9 @@ Returns `*this for method chaining.&]
 specified [%-*@3 path] . Executes socket initialization, SASL authentication, 
 and the Hello handshake. If [%-*@3 abstract] flag is true then 
 DBusConnection will first attempt to connect to abstract unix 
-socket endpoint. Returns true on success.&]
-[s3; &]
-[s4; &]
-[s5;:Upp`:`:DBusConnection`:`:Connect`(const String`&`): [@(0.0.255) bool] 
-[* Connect]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 path])&]
-[s2;%% Connects directly to the D`-Bus UNIX domain socket at the 
-specified file [%-*@3 path] . Executes socket initialization, SASL 
-authentication, and the Hello handshake. Returns true on success.&]
+socket endpoint. Returns true on success. On connection errors 
+or if a connection is already in progress this method will return 
+false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:ConnectSession`(`): [@(0.0.255) bool] 
@@ -82,7 +79,8 @@ authentication, and the Hello handshake. Returns true on success.&]
 [s2;%% Automatically detects and connects to the current user`'s 
 session bus by evaluating the [C@5 DBUS`_SESSION`_BUS`_ADDRESS] 
 environment variable or falling back to [C@5 /run/user/`{uid`}/bus]. 
-Returns true on success.&]
+Returns true on success. On connection errors or if a connection 
+is already in progress this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:ConnectSystem`(`): [@(0.0.255) bool] 
@@ -90,7 +88,8 @@ Returns true on success.&]
 [s2;%% Automatically detects and connects to the system`-wide bus 
 by evaluating the [C@5 DBUS`_SYSTEM`_BUS`_ADDRESS ]environment 
 variable or falling back to [C@5 /var/run/dbus/system`_bus`_socket]. 
-Returns true on success. .&]
+Returns true on success. On connection errors or if a connection 
+is already in progress this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:Disconnect`(`): [@(0.0.255) void] [* Disconnect]()&]
@@ -102,13 +101,15 @@ data.&]
 [s5;:Upp`:`:DBusConnection`:`:Listen`(`): [@(0.0.255) void] [* Listen]()&]
 [s2;%% Switches the connection into listening (server) mode to intercept 
 and dispatch incoming broadcast signals and server`-side method 
-invocations.&]
+invocations. This method will fail if another DBusConnection 
+operation is in progress.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:RequestName`(const String`&`): [@(0.0.255) bool] 
 [* RequestName]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 name])&]
 [s2;%% Requests a well`-known service [%-*@3 name ]on the bus. Returns 
-true on success.&]
+true on success. On errors or if another operation is already 
+in progress this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:SendReply`(const DBusMessage`&`,const DBusValueArray`&`): [@(0.0.255) v
@@ -136,7 +137,9 @@ String[@(0.0.255) `&] [*@3 iface], [@(0.0.255) const] String[@(0.0.255) `&]
 [s2;%% Invokes a remote D`-Bus method on [%-*@3 destination ]service 
 [%-*@3 dest], object [%-*@3 path] , [%-*@3 interface], and [%-*@3 method] 
 name. Blocks in synchronous mode; queues asynchronously and returns 
-immediately in non`-blocking mode. Returns true on success.&]
+immediately in non`-blocking mode. Returns true on success. On 
+errors or if an operation is already in progress this method 
+will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:BroadcastSignal`(const String`&`,const String`&`,const String`&`,const DBusValueArray`&`): [@(0.0.255) b
@@ -153,13 +156,16 @@ and [%-*@3 interface]. Returns true on success.&]
 DBusMessage[@(0.0.255) `&]> [*@3 cb] [@(0.0.255) `=] Null)&]
 [s2;%% Transmits an AddMatch request to the daemon using the specified 
 [%-*@3 rule] string. If a callback [%-*@3 cb] is provided, incoming 
-matching signals are routed directly to it. Returns true on success.&]
+matching signals are routed directly to it. Returns true on success. 
+On errors or if another operation is already in progress this 
+method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:RemoveMatch`(const String`&`): [@(0.0.255) bool] 
 [* RemoveMatch]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 rule])&]
 [s2;%% Unregisters the specified matching [%-*@3 rule] added by [^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection`:`:AddMatch`(const String`&`,Event`)^ A
-ddMatch()] method. Returns true on success.&]
+ddMatch()] method. Returns true on success. On errors or if another 
+operation is already in progress this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:FetchProperty`(const String`&`,const String`&`,const String`&`,const String`&`): [@(0.0.255) b
@@ -169,7 +175,8 @@ String[@(0.0.255) `&] [*@3 interface], [@(0.0.255) const] String[@(0.0.255) `&]
 [*@3 property])&]
 [s2;%% Convenience wrapper that queries a remote object [%-*@3 property 
 ]via [C@5 org.freedesktop.DBus.Properties.Get]. Returns true on 
-success. &]
+success. On errors or if another operation is already in progress 
+this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:Do`(`): [@(0.0.255) bool] [* Do]()&]

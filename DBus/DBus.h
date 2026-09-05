@@ -57,7 +57,12 @@ struct DBusError : Exc {
     DBusError(const String& reason) : Exc(reason), code(-1)         {}
     DBusError(int rc, const String& reason) : Exc(reason), code(rc) {}
 };
-    
+
+namespace UPPDBUS {
+	extern bool trace;
+	extern bool beverbose;
+}
+
 #include "Parser.h"
 #include "Message.h"
 #include "Connection.h"

@@ -1,7 +1,7 @@
 #include "DBus.h"
 
-#define LLOG(x)      // RLOG("D-Bus: " << x)
-#define LDUMPHEX(x)  // RDUMPHEX(x)
+#define LLOG(x)       do { if(UPPDBUS::trace) RLOG("DBusMessage: " << x); } while(false)
+#define LDUMPHEX(x)	  do { if(UPPDBUS::beverbose) RDUMPHEX(x); } while(false)
 
 namespace Upp {
 
@@ -483,7 +483,7 @@ DBusMessage DBusMessage::Create(byte type, byte flags, dword serial, String fiel
 		AppendAlign(fields, 4);
 
 		if(signature.GetLength() > 255) {
-			RLOG("D-Bus signature exceeds 255 byte specification limit.");
+			LLOG("D-Bus signature exceeds 255 byte specification limit.");
 			return Null;
 		}
 		

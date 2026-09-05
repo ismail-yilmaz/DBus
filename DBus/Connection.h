@@ -53,6 +53,9 @@ public:
     String              GetErrorDesc() const                            { return error.Get<String>(); }
     String              GetUniqueName() const                           { return uniquename; }
 
+	static void         Trace(bool b = true)                            { UPPDBUS::trace = b; }
+	static void         TraceVerbose(bool b = true)                     { Trace(); UPPDBUS::beverbose = b; }
+	
     enum ErrorCodes {
         CONNECTION_FAILED = 10000,
         AUTH_FAILED,
