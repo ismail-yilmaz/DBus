@@ -11,16 +11,19 @@ struct DBusValue;
 struct DBusValueMap : public VectorMap<String, DBusValue> {
     using VectorMap<String, DBusValue>::VectorMap;
     DBusValueMap(const DBusValueMap& v) : VectorMap<String, DBusValue>(v, 1) {}
+    DBusValueMap(const Nuller&)                                              {}
 };
 
 struct DBusValueArray : public Vector<DBusValue> {
     using Vector<DBusValue>::Vector;
-    DBusValueArray(const DBusValueArray& v) : Vector<DBusValue>(v, 1) {}
+    DBusValueArray(const DBusValueArray& v) : Vector<DBusValue>(v, 1)        {}
+    DBusValueArray(const Nuller&)                                            {}
 };
 
 struct DBusValueStruct : public Vector<DBusValue> {
     using Vector<DBusValue>::Vector;
-    DBusValueStruct(const DBusValueStruct& v) : Vector<DBusValue>(v, 1) {}
+    DBusValueStruct(const DBusValueStruct& v) : Vector<DBusValue>(v, 1)      {}
+    DBusValueStruct(const Nuller&)                                           {}
 };
 
 class DBusValue : public Moveable<DBusValue>  {
@@ -47,6 +50,8 @@ public:
     template<typename T>  const T& To() const                 { return value.To<T>(); }
     template<typename T>  operator T() const                  { return value.To<T>(); }
 
+    String ToString() const                                   { return value.ToString(); }
+    
 private:
 	Value value;
 };
@@ -63,6 +68,20 @@ namespace UPPDBUS {
 	extern bool beverbose;
 }
 
+inline constexpr const char* StdDBusName           = "org.freedesktop.DBus";
+inline constexpr const char* StdDBusPath           = "/org/freedesktop/DBus";
+
+inline constexpr const char* StdDBusInterface      = "org.freedesktop.DBus";
+inline constexpr const char* StdDBusProperties     = "org.freedesktop.DBus.Properties";
+inline constexpr const char* StdDBusIntrospectable = "org.freedesktop.DBus.Introspectable";
+inline constexpr const char* StdDBusPeer           = "org.freedesktop.DBus.Peer";
+inline constexpr const char* StdDBusObjectManager  = "org.freedesktop.DBus.ObjectManager";
+
+inline constexpr const char* StdDBusLocal          = "org.freedesktop.DBus.Local";
+inline constexpr const char* StdDBusLocalPath      = "/org/freedesktop/DBus/Local";
+
+inline constexpr const char* StdDBusPrefix         = "org.freedesktop.DBus.";
+	
 #include "Parser.h"
 #include "Message.h"
 #include "Connection.h"

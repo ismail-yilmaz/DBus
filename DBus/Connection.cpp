@@ -13,10 +13,6 @@ bool beverbose = false;
 namespace {
 
 constexpr const dword DBUS_SIZECAP = 128 * (1024 * 1024); // 128 MiB, max len.
-constexpr const char *DBUS_NAME    = "org.freedesktop.DBus";
-constexpr const char *DBUS_PATH    = "/org/freedesktop/DBus";
-constexpr const char *DBUS_IFACE   = "org.freedesktop.DBus";
-constexpr const char *DBUS_PROP    = "org.freedesktop.DBus.Properties";
 
 struct EventLock {
 	bool& latch,  prev;
@@ -45,6 +41,7 @@ String ParseDBusAddress(String path, bool& abstract)
 
 	return path;
 }
+
 }
 
 const char* DBusConnection::GetErrorMsg(int code)
@@ -250,15 +247,15 @@ bool DBusConnection::ConnectSystem()
 
 void DBusConnection::Disconnect()
 {
-    LLOG("Disconnecting...");
-    if(socket.IsOpen())
-        socket.Close();
-    status = IDLE;
-    packet.Clear();
-    packlen = 0;
-    extpacket.Clear();
-    extpacklen = 0;
-    queue.Clear();
+	LLOG("Disconnecting...");
+	if(socket.IsOpen())
+		socket.Close();
+	status = IDLE;
+	packet.Clear();
+	packlen = 0;
+	extpacket.Clear();
+	extpacklen = 0;
+	queue.Clear();
 }
 
 bool DBusConnection::AuthRequest()
@@ -314,9 +311,14 @@ bool DBusConnection::AuthParse()
 bool DBusConnection::HelloRequest()
 {
 	LLOG("Starting Hello request...");
-	packet = ~DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "Hello");
+	packet = ~DBusMessage::CreateMethodCall(
+		serial++,
+		StdDBusName,
+		StdDBusPath,
+		StdDBusInterface,
+		"Hello"
+	);
 	packlen = 0;
-
 	LLOG(">> HELLO: Sending request.");
 	LDUMPHEX(packet);
 	PutGet();
@@ -405,9 +407,8 @@ DBusMessage DBusConnection::ExtractMessage()
 	return DBusMessage(res);
 }
 
-bool DBusConnection::MethodCall(const String& dest, const String& path,
-								const String& iface, const String& method,
-								const DBusValueArray& args)
+bool DBusConnection::MethodCall(const String& dest, const String& path,	const String& iface,
+												const String& method, const DBusValueArray& args)
 {
 	ASSERT(socket.IsOpen());
 
@@ -423,9 +424,18 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,
 
 	replymsg = Null;
 	callserial = serial++;
-	DBusMessage msg = DBusMessage::CreateMethodCall(callserial, dest, path, iface, method, args);
+
+	DBusMessage msg = DBusMessage::CreateMethodCall(
+		callserial,
+		dest,
+		path,
+		iface,
+		method,
+		args
+	);
 	if(IsNull(msg))
 		return false;
+
 	packet = ~msg;
 	packlen = 0;
 	queue.Clear();
@@ -495,7 +505,7 @@ void DBusConnection::Listen()
 		LLOG("Aborting. Listen attempted while a previous operation is still in progress.");
 		return;
 	}
-	
+
 	queue.Clear();
 	IsEof = [this] { return ListenIsEof(); };
 	queue.AddTail([this] { return InitCall(); });
@@ -521,31 +531,31 @@ bool DBusConnection::ListenIsEof()
 
 bool DBusConnection::Do0()
 {
-    try {
-        Check();
-        Drain();
-        if(!queue.IsEmpty() && queue.Head()()) {
-            queue.DropHead();
-            starttime = msecs();
-        }
-        bool pending = Drain();
-        if(queue.IsEmpty() && !pending) {
-            LLOG("DBus operation successful.");
-            status = FINISHED;
-        }
-        else
-            WhenDo();
-    }
-    catch(const DBusError& e) {
-        LLOG("Failed: " << e);
-        SetError(e.code, e);
-    }
-    catch(...) {
-        LLOG("Unknown exception.");
-        SetError(EXCEPTION, GetErrorMsg(-1));
-    }
+	try {
+		Check();
+		Drain();
+		if(!queue.IsEmpty() && queue.Head()()) {
+			queue.DropHead();
+			starttime = msecs();
+		}
+		bool pending = Drain();
+		if(queue.IsEmpty() && !pending) {
+			LLOG("DBus operation successful.");
+			status = FINISHED;
+		}
+		else
+			WhenDo();
+	}
+	catch(const DBusError& e) {
+		LLOG("Failed: " << e);
+		SetError(e.code, e);
+	}
+	catch(...) {
+		LLOG("Unknown exception.");
+		SetError(EXCEPTION, GetErrorMsg(-1));
+	}
 
-    return status == WORKING;
+	return status == WORKING;
 }
 
 bool DBusConnection::Run()
@@ -563,14 +573,14 @@ bool DBusConnection::Run()
 
 void DBusConnection::SetError(int code, const String& reason)
 {
-    status = FAILED;
-    queue.Clear();
-    packet.Clear();
-    packlen = 0;
-    extpacket.Clear();
-    extpacklen = 0;
-    socket.ClearAbort();
-    error = MakeTuple<int, String>(code, reason);
+	status = FAILED;
+	queue.Clear();
+	packet.Clear();
+	packlen = 0;
+	extpacket.Clear();
+	extpacklen = 0;
+	socket.ClearAbort();
+	error = MakeTuple<int, String>(code, reason);
 }
 
 bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
@@ -585,15 +595,22 @@ bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 		return true;
 
 	if(dispatching) {
-		DBusMessage msg = DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", { rule });
+		DBusMessage msg = DBusMessage::CreateMethodCall(
+			serial++,
+			StdDBusName,
+			StdDBusPath,
+			StdDBusInterface,
+			"AddMatch", { rule }
+		);
 		if(IsNull(msg))
 			return false;
+		
 		extpacket.Cat(~msg);
 		Touch();
 		return true;
 	}
 	else
-		return MethodCall(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", { rule });
+		return MethodCall(StdDBusName, StdDBusPath, StdDBusInterface, "AddMatch", { rule });
 }
 
 bool DBusConnection::RemoveMatch(const String& rule)
@@ -604,23 +621,38 @@ bool DBusConnection::RemoveMatch(const String& rule)
 		return true;
 
 	if(dispatching) {
-		DBusMessage msg = DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RemoveMatch", { rule });
+		DBusMessage msg = DBusMessage::CreateMethodCall(
+			serial++,
+			StdDBusName,
+			StdDBusPath,
+			StdDBusInterface,
+			"RemoveMatch", { rule }
+		);
 		if(IsNull(msg))
 			return false;
+		
 		extpacket.Cat(~msg);
 		Touch();
 		return true;
 	}
 	else
-		return MethodCall(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RemoveMatch", { rule });
+		return MethodCall(StdDBusName, StdDBusPath, StdDBusInterface, "RemoveMatch", { rule });
 }
 
 void DBusConnection::RestoreMatches()
 {
 	if(signalmatches.IsEmpty())
 		return;
+	
 	for(const SignalMatch& sm : signalmatches)
-		extpacket << ~DBusMessage::CreateMethodCall(serial++, DBUS_NAME, DBUS_PATH, DBUS_IFACE, "AddMatch", { sm.rule });
+		extpacket << ~DBusMessage::CreateMethodCall(
+			serial++,
+			StdDBusName,
+			StdDBusPath,
+			StdDBusInterface,
+			"AddMatch", { sm.rule }
+		);
+		
 	LLOG("Sent server-side match rules: " << signalmatches.GetCount());
 	Touch();
 }
@@ -628,7 +660,7 @@ void DBusConnection::RestoreMatches()
 bool DBusConnection::FetchProperty(const String& dest, const String& path, const String& iface,
 																			const String& prop)
 {
-	return MethodCall(dest, path, DBUS_PROP, "Get", { iface, prop });
+	return MethodCall(dest, path, StdDBusProperties, "Get", { iface, prop });
 }
 
 bool DBusConnection::BroadcastSignal(const String& path, const String& iface, const String& name,
@@ -636,9 +668,16 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 {
 	ASSERT(socket.IsOpen());
 
-	DBusMessage msg = DBusMessage::CreateSignal(serial++, path, iface, name, args);
+	DBusMessage msg = DBusMessage::CreateSignal(
+		serial++,
+		path,
+		iface,
+		name,
+		args
+	);
 	if(IsNull(msg))
 		return false;
+	
 	extpacket.Cat(~msg);
 	Touch();
 	return dispatching ? true : Run();
@@ -646,7 +685,13 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 
 bool DBusConnection::RequestName(const String& name)
 {
-	return MethodCall(DBUS_NAME, DBUS_PATH, DBUS_IFACE, "RequestName", { name, (uint32) 3 });
+	return MethodCall(
+		StdDBusName,
+		StdDBusPath,
+		StdDBusInterface,
+		"RequestName",
+		{ name, (uint32) 3 }
+	);
 }
 
 void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& args)
@@ -654,9 +699,15 @@ void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& arg
 	ASSERT(socket.IsOpen());
 
 	DBusMessage::FieldData fd = req.ParseFields();
-	DBusMessage msg = DBusMessage::CreateMethodReturn(serial++, req.GetSerial(), fd.sender, args);
+	DBusMessage msg = DBusMessage::CreateMethodReturn(
+		serial++,
+		req.GetSerial(),
+		fd.sender,
+		args
+	);
 	if(IsNull(msg))
 		return;
+	
 	extpacket.Cat(~msg);
 	Touch();
 }
@@ -666,9 +717,16 @@ void DBusConnection::SendError(const DBusMessage& req, const String& errname, co
 	ASSERT(socket.IsOpen());
 
 	DBusMessage::FieldData fd = req.ParseFields();
-	DBusMessage msg =  DBusMessage::CreateError(serial++, req.GetSerial(), fd.sender, errname, errmsg);
+	DBusMessage msg =  DBusMessage::CreateError(
+		serial++,
+		req.GetSerial(),
+		fd.sender,
+		errname,
+		errmsg
+	);
 	if(IsNull(msg))
 		return;
+	
 	extpacket.Cat(~msg);
 	Touch();
 
