@@ -4,6 +4,8 @@
 
 ## Features
 
+-   **Cross-Platform Support:** Works on both POSIX-based systems and Windows natively, using unix (filesystem, abstract) and tcp sockets.
+
 -   **Native Protocol Implementation:** Speaks the D-Bus binary protocol directly using standard U++ `Socket` and `String` classes, avoiding external dependencies like `libdbus` or `glib`.
     
 -   **Event Loop Integration:** Integrates easily with U++'s `SocketWaitEvent` for asynchronous messaging. It sleeps when idle and wakes on network traffic, ensuring it won't burn CPU cycles or freeze your GUI.

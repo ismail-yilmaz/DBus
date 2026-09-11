@@ -7,7 +7,7 @@ namespace Upp {
 void BParser::ThrowError(const char *s)
 {
 	LLOG("BParser::Error: " << s);
-	Error err(fn + "(offset " + GetOffset() + "): " + s);
+	Error err(fn + "(offset " << GetOffset() << "): " << s);
 	throw err;
 }
 

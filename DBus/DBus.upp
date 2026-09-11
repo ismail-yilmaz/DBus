@@ -1,10 +1,12 @@
-description "D-Bus client implementation for U++\377";
+description "A cross-platform D-Bus client implementation for U++\377";
 
 uses
 	Core;
 
 file
 	DBus.h,
+	Path.h,
+	Path.cpp,
 	Parser.h,
 	Parser.cpp,
 	Message.h,

@@ -43,7 +43,7 @@ tatic] DBusMessage [* CreateMethodCall]([@(0.128.128) dword ][*@3 serial],
 [@(0.0.255) const] String[@(0.0.255) `&] [*@3 dest], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 path], [@(0.0.255) const] String[@(0.0.255) `&] 
 [*@3 iface], [@(0.0.255) const] String[@(0.0.255) `&] [*@3 method], [@(0.0.255) const] 
-DBusValueArray[@(0.0.255) `&] args `= `{`})&]
+DBusValueArray[@(0.0.255) `&] [*@3 args ]`= [@(0.128.128) Null])&]
 [s2; Constructs a method call message to invoke a remote procedure. 
 [*@3 serial ]is the unique message identifier assigned by the connection 
 engine. [*@3 dest ]is the well`-known or unique bus name of the 
@@ -60,7 +60,7 @@ alongside their generated D`-Bus signatures[C .] Returns [@(0.128.128) Null
 [s5;:Upp`:`:DBusMessage`:`:CreateMethodReturn`(dword`,dword`,const String`&`,const DBusValueArray`&`): [@(0.0.255) s
 tatic] DBusMessage [* CreateMethodReturn]([@(0.128.128) dword ][*@3 serial], 
 dword [*@3 replyserial], [@(0.0.255) const] String[@(0.0.255) `&] [*@3 dest], 
-[@(0.0.255) const] DBusValueArray[@(0.0.255) `&] args `= `{`})&]
+[@(0.0.255) const] DBusValueArray[@(0.0.255) `&] [*@3 args ]`= [@(0.128.128) Null])&]
 [s2; Constructs a method return message indicating successful execution 
 of a remote call. [*@3 serial ]is the unique identifier for this 
 new outgoing message. [*@3 replyserial ]must exactly match the 
@@ -74,8 +74,8 @@ the return values to be serialized into the payload body. Returns
 tatic] DBusMessage [* CreateSignal]([@(0.128.128) dword ][*@3 serial], 
 [@(0.0.255) const] String[@(0.0.255) `&] [*@3 path], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 iface], [@(0.0.255) const] String[@(0.0.255) `&] 
-[*@3 name], [@(0.0.255) const] DBusValueArray[@(0.0.255) `&] args `= 
-`{`})&]
+[*@3 name], [@(0.0.255) const] DBusValueArray[@(0.0.255) `&] [*@3 args 
+]`= [@(0.128.128) Null])&]
 [s2; Constructs a signal message for bus`-wide broadcasting. [*@3 serial 
 ]is the unique identifier for this message. [*@3 path ]is the local 
 object path emitting the signal. [*@3 iface ]is the interface defining 

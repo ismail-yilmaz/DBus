@@ -20,27 +20,93 @@ struct EventLock {
 	~EventLock()                           { latch = prev; }
 };
 
-String ParseDBusAddress(String path, bool& abstract)
+String GetDBusAuthExternalPayload()
+{
+	String id;
+
+#ifdef PLATFORM_POSIX
+	id = AsString(getuid());
+#elif PLATFORM_WIN32
+	HANDLE hToken = nullptr;
+
+	if(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+		DWORD dwLength = 0;
+		GetTokenInformation(hToken, TokenUser, nullptr, 0, &dwLength);
+		if(GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+			Buffer<byte> pTokenUser(dwLength);
+			if(GetTokenInformation(hToken, TokenUser, ~pTokenUser, dwLength, &dwLength)) {
+				TOKEN_USER* ptu = (TOKEN_USER*) ~pTokenUser;
+				SID* sid = (SID*) ptu->User.Sid;
+
+				if(IsValidSid(sid)) {
+					// Format: S-Revision-Authority-Sub1-Sub2...
+					id << "S-" << (int) sid->Revision << "-";
+
+					int64 auth = 0;
+					for(int i = 0; i < 6; i++)
+						auth = (auth << 8) + sid->IdentifierAuthority.Value[i];
+					id << auth;
+
+					for(int i = 0; i < sid->SubAuthorityCount; i++)
+						id << "-" << (int64) sid->SubAuthority[i];
+				}
+			}
+		}
+		CloseHandle(hToken);
+	}
+#endif
+
+	return HexEncode(id);
+}
+
+#ifdef PLATFORM_POSIX
+
+void ParseDBusInfo(String path, String& buspath, bool& abstract, bool systembus)
 {
 	abstract = false;
-
-	if(path.IsEmpty())
-		return path;
-
-	int pos = path.FindAfter("unix:abstract=");
-	if(pos >= 0)
-		abstract = true;
-	else
-		pos = path.FindAfter("unix:path=");
-
-	if(pos >= 0) {
-		path = path.Mid(pos);
-		if(int q = path.Find(','); q >= 0)
-			path = path.Left(q);
+	if(IsNull(path)) {
+		if(systembus) {
+			path = "/var/run/dbus/system_bus_socket";
+			abstract = false;
+		}
+		else {
+			path = Format("/run/user/%d/bus", (int) getuid());
+			abstract = false;
+		}
+		return;
 	}
 
-	return path;
+	DBusPathInfo info(path);
+	if(info.method == "unix") {
+		if(!IsNull(info["abstract"])) {
+			buspath = info["abstract"];
+			abstract = true;
+		}
+		else {
+			buspath = info["path"];
+			abstract = false;
+		}
+	}
+};
+
+#elif PLATFORM_WIN32
+
+void ParseDBusInfo(String path, String& host, int& port, String& noncefile)
+{
+	LLOG("Path string: " << path);
+
+	DBusPathInfo info(path);
+	if(info.method == "tcp" || info.method == "nonce-tcp") {
+		host = info["host"];
+		port = StrInt(info["port"]);
+		noncefile = info["noncefile"];
+		return;
+	}
+	host = "localhost";
+	port = 0;
+	noncefile = Null;
 }
+#endif
 
 }
 
@@ -48,6 +114,7 @@ const char* DBusConnection::GetErrorMsg(int code)
 {
 	static const Tuple<int, const char*> errors[] = {
 		{ CONNECTION_FAILED, t_("Couldn't connect to D-Bus server") },
+		{ DNS_FAILED, t_("DNS lookup failed") },
 		{ AUTH_FAILED, t_("Authentication failed") },
 		{ HELLO_FAILED, t_("Hello request failed") },
 		{ CONNECTION_TIMED_OUT, t_("Connection timed out") },
@@ -71,6 +138,9 @@ DBusConnection::DBusConnection()
 , dispatching(false)
 , serial(1)
 , callserial(0)
+#ifdef PLATFORM_WIN32
+, port(0)
+#endif
 {
 }
 
@@ -89,28 +159,56 @@ bool DBusConnection::Init()
 	status = WORKING;
 	starttime = msecs();
 	dispatching = false;
+#ifdef PLATFORM_WIN32
+	ipinfo.Start(buspath, port);
+	LLOG("Connection to " << buspath << ":" << port);
+#endif
 	return true;
 }
 
-bool DBusConnection::FsConnect()
+#ifdef PLATFORM_WIN32
+
+bool DBusConnection::Dns()
+{
+	if(ipinfo.InProgress())
+		return false;
+	if(ipinfo.GetResult())
+		return true;
+	ThrowError(DNS_FAILED);
+	return true;
+}
+
+bool DBusConnection::TcpConnect()
+{
+	if(socket.Connect(ipinfo)) {
+		LLOG("Successfully connected to D-Bus (tcp) at " << buspath << ":" << port);
+		ipinfo.Clear();
+		return true;
+	}
+	return false;
+}
+
+#elif PLATFORM_POSIX
+
+bool DBusConnection::FsyConnect()
 {
 	if(socket.ConnectFileSystem(buspath)) {
 		LLOG("Successfully connected to D-Bus at " << buspath);
 		return true;
 	}
-	ThrowError(CONNECTION_FAILED);
 	return false;
 }
 
-bool DBusConnection::AsConnect()
+bool DBusConnection::AbsConnect()
 {
 	if(socket.ConnectAbstract(buspath)) {
 		LLOG("Successfully connected to D-Bus (abstract) at " << buspath);
 		return true;
 	}
-	ThrowError(CONNECTION_FAILED);
 	return false;
 }
+
+#endif
 
 bool DBusConnection::Get()
 {
@@ -209,39 +307,40 @@ bool DBusConnection::Connect(const String& path, bool abstract)
 	queue.Clear();
 	IsEof = [this] { return AuthIsEof(); };
 	queue.AddTail([this] { return Init(); });
-
+#ifdef PLATFORM_POSIX
 	if(abstract)
-		queue.AddTail([this] { return AsConnect(); });
+		queue.AddTail([this] { return AbsConnect(); });
 	else
-		queue.AddTail([this] { return FsConnect(); });
-
+		queue.AddTail([this] { return FsyConnect(); });
+#elif PLATFORM_WIN32
+	queue.AddTail([this] { return Dns(); });
+	queue.AddTail([this] { return TcpConnect(); });
+#endif
 	queue.AddTail([this] { return AuthRequest(); });
 	return Run();
 }
 
 bool DBusConnection::ConnectSession()
 {
-	bool abstract;
-	String path = ParseDBusAddress(GetEnv("DBUS_SESSION_BUS_ADDRESS"), abstract);
-
-	if(path.IsEmpty()) {
-		path = Format("/run/user/%d/bus", (int) getuid());
-		abstract = false; // System defaults are standard file sockets
-	}
-
+	String path, var = GetEnv("DBUS_SESSION_BUS_ADDRESS");
+	bool abstract = false;
+#ifdef PLATFORM_POSIX
+	ParseDBusInfo(var, path, abstract, false);
+#elif PLATFORM_WIN32
+	ParseDBusInfo(var, path, port, noncefile);
+#endif
 	return Connect(path, abstract);
 }
 
 bool DBusConnection::ConnectSystem()
 {
-	bool abstract;
-	String path = ParseDBusAddress(GetEnv("DBUS_SYSTEM_BUS_ADDRESS"), abstract);
-
-	if(path.IsEmpty()) {
-		path = "/var/run/dbus/system_bus_socket";
-		abstract = false;
-	}
-
+	String path, var = GetEnv("DBUS_SYSTEM_BUS_ADDRESS");
+	bool abstract = false;
+#ifdef PLATFORM_POSIX
+	ParseDBusInfo(var, path, abstract, true);
+#elif PLATFORM_WIN32
+	ParseDBusInfo(var, path, port, noncefile);
+#endif
 	return Connect(path, abstract);
 }
 
@@ -261,18 +360,21 @@ void DBusConnection::Disconnect()
 bool DBusConnection::AuthRequest()
 {
 	LLOG("Starting authentication...");
-	uid_t uid = getuid();
-	String uidstr = FormatInt(uid);
-	String uidhex;
-	for(int i = 0; i < uidstr.GetLength(); i++) {
-		uidhex << Format("%02x", (byte) uidstr[i]);
-	}
-
 	packet.Clear();
-	packet.Cat('\0');
-	packet << "AUTH EXTERNAL " << uidhex << "\r\n";
+#ifdef PLATFORM_WIN32
+	if(!IsNull(noncefile)) {
+		if(String nonce = LoadFile(noncefile); nonce.GetCount() == 16) {
+			packet << nonce;
+			LLOG("Injected 16-byte TCP nonce.");
+		}
+		else
+			LLOG("Warning: Failed to read 16-byte nonce from " << noncefile);
+	}
+#endif
+	packet << '\0';
+	String payload = GetDBusAuthExternalPayload();
+	packet << (IsNull(payload) ? "AUTH ANONYMOUS\r\n" : "AUTH EXTERNAL " << payload << "\r\n");
 	packlen = 0;
-
 	LLOG(">> AUTH: Sending request.");
 	LDUMPHEX(packet);
 	PutGet();
@@ -445,6 +547,11 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,	const St
 	return Run();
 }
 
+bool DBusConnection::BusMethodCall(const String& method, const DBusValueArray& args)
+{
+	return MethodCall(StdDBusName, StdDBusPath, StdDBusInterface, method, args);
+}
+
 bool DBusConnection::InitCall()
 {
 	LLOG("Starting method call...");
@@ -463,7 +570,6 @@ bool DBusConnection::MethodRequest()
 void DBusConnection::DispatchSignal(const DBusMessage& msg)
 {
 	EventLock __(dispatching);
-
 	bool handled = false;
 	for(const auto& sm : signalmatches) {
 		if(msg.MatchRule(sm.rule)) {
@@ -473,6 +579,12 @@ void DBusConnection::DispatchSignal(const DBusMessage& msg)
 	}
 	if(!handled)
 		WhenSignal(msg);
+}
+
+void DBusConnection::DispatchMethodCall(const DBusMessage& msg)
+{
+	EventLock __(dispatching);
+	WhenMethodCall(msg);
 }
 
 bool DBusConnection::MethodIsEof()
@@ -485,8 +597,7 @@ bool DBusConnection::MethodIsEof()
 		}
 		else
 		if(msg.IsMethodCall()) {
-			EventLock __(dispatching);
-			WhenMethodCall(msg);
+			DispatchMethodCall(msg);
 		}
 		else
 		if(msg.IsMethodReturn() || msg.IsError()) {
@@ -522,8 +633,7 @@ bool DBusConnection::ListenIsEof()
 		}
 		else
 		if(msg.IsMethodCall()) {
-			EventLock __(dispatching);
-			WhenMethodCall(msg);
+			DispatchMethodCall(msg);
 		}
 	}
 	return false;
@@ -604,7 +714,7 @@ bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 		);
 		if(IsNull(msg))
 			return false;
-		
+
 		extpacket.Cat(~msg);
 		Touch();
 		return true;
@@ -630,7 +740,7 @@ bool DBusConnection::RemoveMatch(const String& rule)
 		);
 		if(IsNull(msg))
 			return false;
-		
+
 		extpacket.Cat(~msg);
 		Touch();
 		return true;
@@ -643,7 +753,7 @@ void DBusConnection::RestoreMatches()
 {
 	if(signalmatches.IsEmpty())
 		return;
-	
+
 	for(const SignalMatch& sm : signalmatches)
 		extpacket << ~DBusMessage::CreateMethodCall(
 			serial++,
@@ -652,7 +762,7 @@ void DBusConnection::RestoreMatches()
 			StdDBusInterface,
 			"AddMatch", { sm.rule }
 		);
-		
+
 	LLOG("Sent server-side match rules: " << signalmatches.GetCount());
 	Touch();
 }
@@ -677,7 +787,7 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 	);
 	if(IsNull(msg))
 		return false;
-	
+
 	extpacket.Cat(~msg);
 	Touch();
 	return dispatching ? true : Run();
@@ -707,7 +817,7 @@ void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& arg
 	);
 	if(IsNull(msg))
 		return;
-	
+
 	extpacket.Cat(~msg);
 	Touch();
 }
@@ -726,7 +836,7 @@ void DBusConnection::SendError(const DBusMessage& req, const String& errname, co
 	);
 	if(IsNull(msg))
 		return;
-	
+
 	extpacket.Cat(~msg);
 	Touch();
 

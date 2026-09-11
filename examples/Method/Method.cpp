@@ -11,7 +11,7 @@ CONSOLE_APP_MAIN
 	RLOG("Connecting to D-Bus...");
 	if(dbus.ConnectSession()) {
 		RLOG("Requesting active bus names...");
-		if(dbus.MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",	"ListNames")) {
+		if(dbus.BusMethodCall("ListNames")) {
 			if(const DBusMessage& msg = dbus.GetMessage(); msg.IsOK()) {
 				Vector<String> names = msg.ParseStringArray();
 				RLOG("Active names: " << names.GetCount());

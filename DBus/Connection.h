@@ -17,12 +17,14 @@ public:
     void                Listen();
 
     bool                RequestName(const String& name);
-    void                SendReply(const DBusMessage& req, const DBusValueArray& args = {});
+    void                SendReply(const DBusMessage& req, const DBusValueArray& args = Null);
     void                SendError(const DBusMessage& req, const String& errname, const String& errmsg = Null);
 
-    bool                MethodCall(const String& dest, const String& path, const String& iface, const String& method, const DBusValueArray& args = {});
+    bool                MethodCall(const String& dest, const String& path, const String& iface, const String& method, const DBusValueArray& args = Null);
 
-    bool                BroadcastSignal(const String& path, const String& iface, const String& name, const DBusValueArray& args = {});
+	bool                BusMethodCall(const String& method, const DBusValueArray& args = Null);
+
+    bool                BroadcastSignal(const String& path, const String& iface, const String& name, const DBusValueArray& args = Null);
     
     bool                AddMatch(const String& rule, Event<const DBusMessage&> cb = Null);
     bool                RemoveMatch(const String& rule);
@@ -58,6 +60,7 @@ public:
 	
     enum ErrorCodes {
         CONNECTION_FAILED = 10000,
+        DNS_FAILED,
         AUTH_FAILED,
         HELLO_FAILED,
         CONNECTION_TIMED_OUT,
@@ -73,8 +76,13 @@ private:
     void                SetError(int code, const String& reason);
     bool                Init();
     void                Touch()                                         { status = WORKING; starttime = msecs(); }
-    bool                FsConnect();
-    bool                AsConnect();
+#ifdef PLATFORM_WIN32
+	bool                Dns();
+    bool                TcpConnect();
+#elif PLATFORM_POSIX
+    bool                FsyConnect();
+    bool                AbsConnect();
+#endif
     bool                Get();
     bool                Put();
     bool                Drain();
@@ -99,6 +107,7 @@ private:
 
     bool                ListenIsEof();
     void                DispatchSignal(const DBusMessage& msg);
+    void                DispatchMethodCall(const DBusMessage& msg);
 
     bool                GetMessageLength(int& tot);
     
@@ -124,7 +133,7 @@ private:
     int                 starttime;
     int                 timeout;
     int                 waitstep;
-    bool                async:1;
+    bool                async;
     bool                dispatching;
     Tuple<int, String>  error;
     Gate<>              IsEof;
@@ -135,4 +144,11 @@ private:
     String              uniquename;
     DBusMessage         replymsg;
     Vector<SignalMatch> signalmatches;
+
+#ifdef PLATFORM_WIN32
+	String              noncefile;
+	int                 port;
+	IpAddrInfo          ipinfo;
+#endif
+
 };

@@ -13,8 +13,8 @@ topic "DBusConnection";
 [ {{10000@(113.42.0) [s0;%% [*@7;4 DBusConnection]]}}&]
 [s3; &]
 [s1;:Upp`:`:DBusConnection: [@(0.0.255)3 class][3  ][*3 DBusConnection]&]
-[s0;l288;%% This class manages a low`-level UNIX domain socket connection 
-to the [^https`:`/`/dbus`.freedesktop`.org`/doc`/dbus`-specification`.html^ D`-Bus] 
+[s0;l288;%% This class manages a low`-level socket connection to 
+the [^https`:`/`/dbus`.freedesktop`.org`/doc`/dbus`-specification`.html^ D`-Bus] 
 daemon. &]
 [s2;%% &]
 [s0;l288;i150;O0;%% Supports both blocking and non`-blocking operation 
@@ -29,6 +29,11 @@ error dispatching.&]
 [s3; &]
 [s5;:Upp`:`:DBusConnection`:`:DBusConnection`(`): [* DBusConnection]()&]
 [s2;%% Default constructor.&]
+[s3;%% &]
+[s4; &]
+[s5;:Upp`:`:DBusConnection`:`:`~`(`): [* `~DBusConnection]()&]
+[s2;%% Default destructor. Calls [^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection`:`:Disconnect`(`)^ D
+isconnect()].&]
 [s3; &]
 [ {{10000F(128)G(128)@1 [s0;%% [* Public Method List]]}}&]
 [s3; &]
@@ -65,31 +70,39 @@ Returns `*this for method chaining.&]
 [s5;:Upp`:`:DBusConnection`:`:Connect`(const String`&`,bool`): [@(0.0.255) bool] 
 [* Connect]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 path], [@(0.0.255) bool] 
 [*@3 abstract] [@(0.0.255) `=] [@(0.0.255) false])&]
-[s2;%% Connects directly to the D`-Bus UNIX domain socket at the 
-specified [%-*@3 path] . Executes socket initialization, SASL authentication, 
-and the Hello handshake. If [%-*@3 abstract] flag is true then 
-DBusConnection will first attempt to connect to abstract unix 
-socket endpoint. Returns true on success. On connection errors 
-or if a connection is already in progress this method will return 
-false.&]
+[s2;%% Connects directly to the D`-Bus endpoint specified by the 
+[%-*@3 path] (or address string), supporting Unix domain sockets, 
+abstract sockets, TCP, and nonce`-tcp transports. Executes socket 
+initialization, optional 16`-byte nonce transmission, SASL authentication, 
+and the Hello handshake. If the [%-*@3 abstract] flag is true, 
+[C^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection^ DBusCo
+nnection] will first attempt to connect to an abstract Unix socket 
+endpoint (Unix`-only). Returns true on success. On connection 
+errors or if a connection is already in progress, this method 
+returns false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:ConnectSession`(`): [@(0.0.255) bool] 
 [* ConnectSession]()&]
 [s2;%% Automatically detects and connects to the current user`'s 
 session bus by evaluating the [C@5 DBUS`_SESSION`_BUS`_ADDRESS] 
-environment variable or falling back to [C@5 /run/user/`{uid`}/bus]. 
-Returns true on success. On connection errors or if a connection 
-is already in progress this method will return false.&]
+environment variable. If the variable is not found on Unix`-like 
+systems, it falls back to [C@5 /run/user/`{][C@(0.128.128) uid][C@5 `}/bus]. 
+On Windows, resolves configured TCP or nonce`-tcp connection 
+strings. Returns true on success. On connection errors or if 
+a connection is already in progress, this method returns false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:ConnectSystem`(`): [@(0.0.255) bool] 
 [* ConnectSystem]()&]
 [s2;%% Automatically detects and connects to the system`-wide bus 
 by evaluating the [C@5 DBUS`_SYSTEM`_BUS`_ADDRESS ]environment 
-variable or falling back to [C@5 /var/run/dbus/system`_bus`_socket]. 
-Returns true on success. On connection errors or if a connection 
-is already in progress this method will return false.&]
+variable.  If the variable is not found on Unix`-like systems, 
+it falls back to [C@5 /var/run/dbus/system`_bus`_socket]. On Windows, 
+resolves configured TCP or nonce`-tcp connection strings, typically 
+relying on a globally shared nonce file. Returns true on success. 
+On connection errors or if a connection is already in progress 
+this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:Disconnect`(`): [@(0.0.255) void] [* Disconnect]()&]
@@ -114,7 +127,7 @@ in progress this method will return false.&]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:SendReply`(const DBusMessage`&`,const DBusValueArray`&`): [@(0.0.255) v
 oid] [* SendReply]([@(0.0.255) const] DBusMessage[@(0.0.255) `&] [*@3 req], 
-[@(0.0.255) const] DBusValueArray[@(0.0.255) `&] args `= `{`})&]
+[@(0.0.255) const] DBusValueArray[@(0.0.255) `&] [*@3 args] `= [@(0.128.128) Null])&]
 [s2;%% Buffers and queues a successful method return response directed 
 back to the unique sender of the incoming request [%-*@3 req].&]
 [s3; &]
@@ -132,28 +145,39 @@ and an optional message [%-*@3 errmsg].&]
 ool] [* MethodCall]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 dest], 
 [@(0.0.255) const] String[@(0.0.255) `&] [*@3 path], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 iface], [@(0.0.255) const] String[@(0.0.255) `&] 
-[*@3 method], [@(0.0.255) const] DBusValueArray[@(0.0.255) `&] args 
-`= `{`})&]
-[s2;%% Invokes a remote D`-Bus method on [%-*@3 destination ]service 
-[%-*@3 dest], object [%-*@3 path] , [%-*@3 interface], and [%-*@3 method] 
-name. Blocks in synchronous mode; queues asynchronously and returns 
-immediately in non`-blocking mode. Returns true on success. On 
-errors or if an operation is already in progress this method 
-will return false.&]
+[*@3 method], [@(0.0.255) const] DBusValueArray[@(0.0.255) `&] [*@3 args] 
+`= [@(0.128.128) Null])&]
+[s2;%% Invokes a remote D`-Bus [%-*@3 method ]with [%-*@3 args][%-  ]on 
+[%-*@3 destination ]service [%-*@3 dest], object [%-*@3 path] , [%-*@3 interface], 
+and [%-*@3 method] name. Blocks in synchronous mode; queues asynchronously 
+and returns immediately in non`-blocking mode. Returns true on 
+success. On errors or if an operation is already in progress 
+this method will return false.&]
+[s3; &]
+[s4; &]
+[s5;:Upp`:`:DBusConnection`:`:BusMethodCall`(const String`&`,const DBusValueArray`&`): [@(0.0.255) b
+ool] [* BusMethodCall]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 method], 
+[@(0.0.255) const] DBusValueArray[@(0.0.255) `&] [*@3 args] [@(0.0.255) `=] 
+[@(0.128.128) Null])&]
+[s2;%% Convenience method. Invokes a remote D`-Bus [%-*@3 method] with 
+[%-*@3 args] on D`-Bus daemon. Blocks in synchronous mode; queues 
+asynchronously and returns immediately in non`-blocking mode. 
+Returns true on success. On errors or if an operation is already 
+in progress this method will return false.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:BroadcastSignal`(const String`&`,const String`&`,const String`&`,const DBusValueArray`&`): [@(0.0.255) b
 ool] [* BroadcastSignal]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 path], 
 [@(0.0.255) const] String[@(0.0.255) `&] [*@3 iface], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 name], [@(0.0.255) const] DBusValueArray[@(0.0.255) `&] 
-args `= `{`})&]
+[*@3 args] `= [@(0.128.128) Null])&]
 [s2;%% Emits a broadcast signal across the bus from object [%-*@3 path] 
 and [%-*@3 interface]. Returns true on success.&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusConnection`:`:AddMatch`(const String`&`,Event`): [@(0.0.255) bool] 
 [* AddMatch]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 rule], Event<[@(0.0.255) const] 
-DBusMessage[@(0.0.255) `&]> [*@3 cb] [@(0.0.255) `=] Null)&]
+DBusMessage[@(0.0.255) `&]> [*@3 cb] [@(0.0.255) `=] [@(0.128.128) Null])&]
 [s2;%% Transmits an AddMatch request to the daemon using the specified 
 [%-*@3 rule] string. If a callback [%-*@3 cb] is provided, incoming 
 matching signals are routed directly to it. Returns true on success. 
@@ -286,6 +310,8 @@ etError()] method:&]
 :: [s0;%% [* Description]]
 :: [s0;%% [C@5 CONNECTION`_FAILED]]
 :: [s0;%% Couldn`'t connect to D`-Bus server.]
+:: [s0;%% [C@5 DNS`_FAILED]]
+:: [s0;%% DNS lookup failed. (Windows only)]
 :: [s0;%% [C@5 AUTH`_FAILED]]
 :: [s0;%% Authentication failed.]
 :: [s0;%% [C@5 HELLO`_FAILED]]

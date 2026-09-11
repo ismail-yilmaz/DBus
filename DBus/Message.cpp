@@ -569,7 +569,7 @@ DBusMessage DBusMessage::CreateError(dword serial, dword replyserial, const Stri
 		args.Add(errmsg);
 
 	// NO_REPLY_EXPECTED = 1
-	return Create(ERROR, 1, serial, fields, args);
+	return Create(PROTOCOL_ERROR, 1, serial, fields, args);
 }
 
 DBusMessage::FieldData DBusMessage::ParseFields() const

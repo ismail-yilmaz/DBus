@@ -4,7 +4,7 @@ public:
         INVALID = 0,
         METHOD_CALL = 1,
         METHOD_RETURN = 2,
-        ERROR = 3,
+        PROTOCOL_ERROR = 3,
         SIGNAL = 4
     };
 
@@ -35,16 +35,16 @@ public:
     DBusMessage(const String& rawdata);
     DBusMessage(const Nuller&);
 	
-    static DBusMessage CreateMethodCall(dword serial, const String& dest, const String& path, const String& iface, const String& method, const DBusValueArray& args = {});
-    static DBusMessage CreateMethodReturn(dword serial, dword replyserial, const String& dest, const DBusValueArray& args = {});
-    static DBusMessage CreateSignal(dword serial, const String& path, const String& iface, const String& name, const DBusValueArray& args = {});
+    static DBusMessage CreateMethodCall(dword serial, const String& dest, const String& path, const String& iface, const String& method, const DBusValueArray& args = Null);
+    static DBusMessage CreateMethodReturn(dword serial, dword replyserial, const String& dest, const DBusValueArray& args = Null);
+    static DBusMessage CreateSignal(dword serial, const String& path, const String& iface, const String& name, const DBusValueArray& args = Null);
     static DBusMessage CreateError(dword serial, dword replyserial, const String& dest, const String& errname, const String& errmsg);
 
-    bool               IsOK() const             { return !IsNullInstance() && GetType() != ERROR; }
+    bool               IsOK() const             { return !IsNullInstance() && GetType() != PROTOCOL_ERROR; }
     bool               IsMethodCall() const     { return GetType() == METHOD_CALL; }
     bool               IsMethodReturn() const   { return GetType() == METHOD_RETURN; }
     bool               IsSignal() const         { return GetType() == SIGNAL; }
-    bool               IsError() const          { return GetType() == ERROR; }
+    bool               IsError() const          { return GetType() == PROTOCOL_ERROR; }
     bool               IsNullInstance() const   { return IsNull(data) || header.type == INVALID; }
 
     Type               GetType() const          { return (Type) header.type; }

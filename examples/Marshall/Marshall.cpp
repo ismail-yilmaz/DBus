@@ -24,13 +24,7 @@ CONSOLE_APP_MAIN
 
 	RLOG("Sending complex U++ payloads over the wire...");
 
-	dbus.MethodCall(
-		"org.freedesktop.DBus",
-		"/org/freedesktop/DBus",
-		"org.freedesktop.DBus",
-		"NonExistentMethod",           // Should return error
-		{ map, arr }
-	);
+	dbus.BusMethodCall("NonExistentMethod", { map, arr });   // Should return error
 
 	if(const DBusMessage& msg = dbus.GetMessage(); msg.IsError()) {
 		RLOG("Daemon safely parsed the payload boundaries and replied:");
