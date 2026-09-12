@@ -1,0 +1,26 @@
+description "A library of D-Bus components for U++ DBus package\377";
+
+uses
+	Core,
+	DBus;
+
+file
+	DBusLib.h,
+	Inspector readonly separator,
+	Inspector.h,
+	Inspector.cpp,
+	MediaPlayer readonly separator,
+	MediaPlayer.h,
+	MediaPlayer.cpp,
+	Notification readonly separator,
+	Notification.h,
+	Notification.cpp,
+	Docs readonly separator,
+	src.tpp,
+	Info readonly separator,
+	Copying,
+	ToDo;
+
+mainconfig
+	"" = "";
+

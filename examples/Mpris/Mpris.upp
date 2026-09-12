@@ -1,0 +1,12 @@
+description "A basic example demonstrating MPRIS D-Bus interface.\377";
+
+uses
+	Core,
+	DBusLib;
+
+file
+	main.cpp;
+
+mainconfig
+	"" = "";
+

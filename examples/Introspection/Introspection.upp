@@ -1,0 +1,12 @@
+description "Demonstrates the usage of D-Bus introspection (discovery) interface.\377";
+
+uses
+	Core,
+	DBusLib;
+
+file
+	main.cpp;
+
+mainconfig
+	"" = "";
+

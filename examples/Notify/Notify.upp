@@ -2,11 +2,10 @@ description "A minimal client application demonstrating how to trigger a native 
 
 uses
 	Core,
-	DBus;
+	DBusLib;
 
 file
-	Notify.h,
-	Notify.cpp;
+	main.cpp;
 
 mainconfig
 	"" = "";
