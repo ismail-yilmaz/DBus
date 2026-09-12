@@ -12,19 +12,19 @@ namespace Upp {
 // Forward declarations
 struct DBusValue;
 
-struct DBusValueMap : public VectorMap<String, DBusValue> {
+struct DBusValueMap : VectorMap<String, DBusValue> {
     using VectorMap<String, DBusValue>::VectorMap;
     DBusValueMap(const DBusValueMap& v) : VectorMap<String, DBusValue>(v, 1) {}
     DBusValueMap(const Nuller&)                                              {}
 };
 
-struct DBusValueArray : public Vector<DBusValue> {
+struct DBusValueArray : Vector<DBusValue> {
     using Vector<DBusValue>::Vector;
     DBusValueArray(const DBusValueArray& v) : Vector<DBusValue>(v, 1)        {}
     DBusValueArray(const Nuller&)                                            {}
 };
 
-struct DBusValueStruct : public Vector<DBusValue> {
+struct DBusValueStruct : Vector<DBusValue> {
     using Vector<DBusValue>::Vector;
     DBusValueStruct(const DBusValueStruct& v) : Vector<DBusValue>(v, 1)      {}
     DBusValueStruct(const Nuller&)                                           {}

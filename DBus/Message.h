@@ -34,7 +34,7 @@ public:
     DBusMessage();
     DBusMessage(const String& rawdata);
     DBusMessage(const Nuller&);
-	
+    
     static DBusMessage CreateMethodCall(dword serial, const String& dest, const String& path, const String& iface, const String& method, const DBusValueArray& args = Null);
     static DBusMessage CreateMethodReturn(dword serial, dword replyserial, const String& dest, const DBusValueArray& args = Null);
     static DBusMessage CreateSignal(dword serial, const String& path, const String& iface, const String& name, const DBusValueArray& args = Null);
@@ -52,16 +52,17 @@ public:
     const Header&      GetHeader() const        { return header; }
     const String&      GetRawData() const       { return data; }
     const String&      operator~() const        { return data; }
-	
+    
     FieldData          ParseFields() const;
     DBusValueArray     ParseBody() const;
     String             ParseString() const;
     Vector<String>     ParseStringArray() const;
-
+    
     bool               MatchRule(const String& rule) const;
 
     String             GetErrorName() const     { return ParseFields().error; }
     String             GetErrorDesc() const;
+
     
 private:
     static DBusMessage Create(byte type, byte flags, dword serial, String fields, const DBusValueArray& args);
@@ -69,3 +70,12 @@ private:
     String data;
     Header header;
 };
+
+// Helpers
+template<typename T> T GetFirstArg(const DBusMessage& msg, T defval)
+{
+    if(msg.IsOK())
+        if(DBusValueArray va = msg.ParseBody(); va.GetCount() > 0 && va[0].Is<T>())
+            return va[0];
+    return defval;
+}

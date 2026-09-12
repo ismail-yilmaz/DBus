@@ -803,5 +803,4 @@ String DBusMessage::ParseString() const
 		return String::GetVoid();
 	}
 }
-
 }
