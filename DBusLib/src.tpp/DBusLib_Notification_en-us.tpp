@@ -29,7 +29,7 @@ on](DBusConnection[@(0.0.255) `&] [*@3 session])&]
 [s2;%% Initializes the notification helper to operate over the specified 
 [%-*@3 dbus] connection. The connection must already be established 
 and the [^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection^ D
-BusConnection] object must outlive the inspector.&]
+BusConnection] object must outlive the notification helper.&]
 [s3;%% &]
 [ {{10000F(128)G(128)@1 [s0;%% [* Public Method List]]}}&]
 [s3; &]

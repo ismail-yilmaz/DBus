@@ -128,8 +128,8 @@ const char* DBusConnection::GetErrorMsg(int code)
 }
 
 DBusConnection::DBusConnection()
-: packlen(0)
-, extpacklen(0)
+: outpacklen(0)
+, sidepacklen(0)
 , status(IDLE)
 , starttime(0)
 , timeout(60000)
@@ -152,10 +152,11 @@ DBusConnection::~DBusConnection()
 bool DBusConnection::Init()
 {
 	socket.Timeout(0);
-	packet.Clear();
-	packlen = 0;
-	extpacket.Clear();
-	extpacklen = 0;
+	outpacket.Clear();
+	inpacket.Clear();
+	outpacklen = 0;
+	sidepacket.Clear();
+	sidepacklen = 0;
 	status = WORKING;
 	starttime = msecs();
 	dispatching = false;
@@ -218,8 +219,8 @@ bool DBusConnection::Get()
 		int c = socket.Get();
 		if(c < 0)
 			break;
-		packet.Cat(c);
-		Check(packet);
+		inpacket.Cat(c);
+		Check(inpacket);
 		starttime = msecs();
 	}
 	return false;
@@ -228,14 +229,14 @@ bool DBusConnection::Get()
 bool DBusConnection::Put()
 {
 	while(!IsTimeout()) {
-		int n = packet.GetLength() - packlen;
-		n = socket.Put(~packet + packlen, n);
+		int n = outpacket.GetLength() - outpacklen;
+		n = socket.Put(~outpacket + outpacklen, n);
 		if(n == 0)
 			break;
-		packlen += n;
-		if(packlen == packet.GetLength()) {
-			packet.Clear();
-			packlen = 0;
+		outpacklen += n;
+		if(outpacklen == outpacket.GetLength()) {
+			outpacket.Clear();
+			outpacklen = 0;
 			return true;
 		}
 		starttime = msecs();
@@ -247,29 +248,29 @@ bool DBusConnection::Drain()
 {
 	// Server "Put"
 
-	if(!extpacket.GetCount()) {
-		extpacklen = 0;
+	if(!sidepacket.GetCount()) {
+		sidepacklen = 0;
 		return false;
 	}
 	while(!IsTimeout()) {
-		int n = extpacket.GetLength() - extpacklen;
+		int n = sidepacket.GetLength() - sidepacklen;
 		if(n <= 0) {
-			extpacket.Clear();
-			extpacklen = 0;
+			sidepacket.Clear();
+			sidepacklen = 0;
 			break;
 		}
-		n = socket.Put(~extpacket + extpacklen, n);
+		n = socket.Put(~sidepacket + sidepacklen, n);
 		if(n <= 0)
 			break;
-		extpacklen += n;
-		if(extpacklen == extpacket.GetLength()) {
-			extpacket.Clear();
-			extpacklen = 0;
+		sidepacklen += n;
+		if(sidepacklen == sidepacket.GetLength()) {
+			sidepacket.Clear();
+			sidepacklen = 0;
 			break;
 		}
 		starttime = msecs();
 	}
-	return extpacket.GetCount() > 0;;
+	return sidepacket.GetCount() > 0;
 }
 
 void DBusConnection::PutGet()
@@ -350,41 +351,45 @@ void DBusConnection::Disconnect()
 	if(socket.IsOpen())
 		socket.Close();
 	status = IDLE;
-	packet.Clear();
-	packlen = 0;
-	extpacket.Clear();
-	extpacklen = 0;
+	outpacket.Clear();
+	outpacklen = 0;
+	inpacket.Clear();
+	sidepacket.Clear();
+	sidepacklen = 0;
 	queue.Clear();
 }
 
 bool DBusConnection::AuthRequest()
 {
 	LLOG("Starting authentication...");
-	packet.Clear();
+	outpacket.Clear();
 #ifdef PLATFORM_WIN32
 	if(!IsNull(noncefile)) {
 		if(String nonce = LoadFile(noncefile); nonce.GetCount() == 16) {
-			packet << nonce;
+			outpacket << nonce;
 			LLOG("Injected 16-byte TCP nonce.");
 		}
 		else
 			LLOG("Warning: Failed to read 16-byte nonce from " << noncefile);
 	}
 #endif
-	packet << '\0';
+	outpacket << '\0';
 	String payload = GetDBusAuthExternalPayload();
-	packet << (IsNull(payload) ? "AUTH ANONYMOUS\r\n" : "AUTH EXTERNAL " << payload << "\r\n");
-	packlen = 0;
+	if(IsNull(payload))
+		outpacket << "AUTH ANONYMOUS\r\n";
+	else
+		outpacket << "AUTH EXTERNAL " << payload << "\r\n";
+	outpacklen = 0;
 	LLOG(">> AUTH: Sending request.");
-	LDUMPHEX(packet);
+	LDUMPHEX(outpacket);
 	PutGet();
 	return true;
 }
 
 bool DBusConnection::AuthIsEof()
 {
-	if(packet.GetCount() > 1) {
-		const char* c = packet.Last();
+	if(inpacket.GetCount() > 1) {
+		const char* c = inpacket.Last();
 		if(c[-1] == '\r' && c[0] == '\n') {
 			return AuthParse();
 		}
@@ -395,11 +400,12 @@ bool DBusConnection::AuthIsEof()
 bool DBusConnection::AuthParse()
 {
 	LLOG("<< AUTH: Reply received.");
-	LDUMPHEX(packet);
+	LDUMPHEX(inpacket);
 
-	if(packet.StartsWith("OK")) {
-		packet = "BEGIN\r\n";
-		packlen = 0;
+	if(inpacket.StartsWith("OK")) {
+		inpacket.Clear();
+		outpacket = "BEGIN\r\n";
+		outpacklen = 0;
 		IsEof = [this] { return HelloIsEof(); };
 		queue.AddTail([this] { return Put(); });
 		queue.AddTail([this] { return HelloRequest(); });
@@ -413,16 +419,16 @@ bool DBusConnection::AuthParse()
 bool DBusConnection::HelloRequest()
 {
 	LLOG("Starting Hello request...");
-	packet = ~DBusMessage::CreateMethodCall(
+	outpacket = ~DBusMessage::CreateMethodCall(
 		serial++,
 		StdDBusName,
 		StdDBusPath,
 		StdDBusInterface,
 		"Hello"
 	);
-	packlen = 0;
+	outpacklen = 0;
 	LLOG(">> HELLO: Sending request.");
-	LDUMPHEX(packet);
+	LDUMPHEX(outpacket);
 	PutGet();
 	return true;
 }
@@ -448,7 +454,7 @@ bool DBusConnection::HelloParse()
 	}
 	else
 	if(msg.IsMethodCall()) {
-		WhenMethodCall(msg);
+		DispatchMethodCall(msg);
 		return false;
 	}
 	else
@@ -465,10 +471,10 @@ bool DBusConnection::HelloParse()
 
 bool DBusConnection::GetMessageLength(int& tot)
 {
-	if(packet.GetCount() < 16)
+	if(inpacket.GetCount() < 16)
 		return false;
 
-	BParser bp(packet);
+	BParser bp(inpacket);
 	bp.BigEndian(bp.PeekByte() == 'B');
 
 	bp.Skip(4);
@@ -496,7 +502,7 @@ bool DBusConnection::MsgIsEof()
 	int total;
 	if(!GetMessageLength(total))
 		return false;
-	return packet.GetCount() >= total;
+	return inpacket.GetCount() >= total;
 }
 
 DBusMessage DBusConnection::ExtractMessage()
@@ -504,8 +510,8 @@ DBusMessage DBusConnection::ExtractMessage()
 	int total;
 	if(!GetMessageLength(total))
 		return Null;
-	String res = packet.Left(total);
-	packet.Remove(0, total);
+	String res = inpacket.Left(total);
+	inpacket.Remove(0, total);
 	return DBusMessage(res);
 }
 
@@ -538,8 +544,8 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,	const St
 	if(IsNull(msg))
 		return false;
 
-	packet = ~msg;
-	packlen = 0;
+	outpacket = ~msg;
+	outpacklen = 0;
 	queue.Clear();
 	IsEof = [this] { return MethodIsEof(); };
 	queue.AddTail([this] { return InitCall(); });
@@ -562,7 +568,7 @@ bool DBusConnection::InitCall()
 bool DBusConnection::MethodRequest()
 {
 	LLOG(">> METHOD: Sending request.");
-	LDUMPHEX(packet);
+	LDUMPHEX(outpacket);
 	PutGet();
 	return true;
 }
@@ -685,11 +691,12 @@ void DBusConnection::SetError(int code, const String& reason)
 {
 	status = FAILED;
 	queue.Clear();
-	packet.Clear();
-	packlen = 0;
-	extpacket.Clear();
-	extpacklen = 0;
+	outpacket.Clear();
+	outpacklen = 0;
+	sidepacket.Clear();
+	sidepacklen = 0;
 	socket.ClearAbort();
+	socket.ClearError();
 	error = MakeTuple<int, String>(code, reason);
 }
 
@@ -715,12 +722,12 @@ bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 		if(IsNull(msg))
 			return false;
 
-		extpacket.Cat(~msg);
+		sidepacket.Cat(~msg);
 		Touch();
 		return true;
 	}
 	else
-		return MethodCall(StdDBusName, StdDBusPath, StdDBusInterface, "AddMatch", { rule });
+		return BusMethodCall("AddMatch", { rule });
 }
 
 bool DBusConnection::RemoveMatch(const String& rule)
@@ -741,12 +748,12 @@ bool DBusConnection::RemoveMatch(const String& rule)
 		if(IsNull(msg))
 			return false;
 
-		extpacket.Cat(~msg);
+		sidepacket.Cat(~msg);
 		Touch();
 		return true;
 	}
 	else
-		return MethodCall(StdDBusName, StdDBusPath, StdDBusInterface, "RemoveMatch", { rule });
+		return BusMethodCall("RemoveMatch", { rule });
 }
 
 void DBusConnection::RestoreMatches()
@@ -755,7 +762,7 @@ void DBusConnection::RestoreMatches()
 		return;
 
 	for(const SignalMatch& sm : signalmatches)
-		extpacket << ~DBusMessage::CreateMethodCall(
+		sidepacket << ~DBusMessage::CreateMethodCall(
 			serial++,
 			StdDBusName,
 			StdDBusPath,
@@ -788,20 +795,14 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 	if(IsNull(msg))
 		return false;
 
-	extpacket.Cat(~msg);
+	sidepacket.Cat(~msg);
 	Touch();
 	return dispatching ? true : Run();
 }
 
 bool DBusConnection::RequestName(const String& name)
 {
-	return MethodCall(
-		StdDBusName,
-		StdDBusPath,
-		StdDBusInterface,
-		"RequestName",
-		{ name, (uint32) 3 }
-	);
+	return BusMethodCall("RequestName",	{ name, (uint32) 3 });
 }
 
 void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& args)
@@ -818,7 +819,7 @@ void DBusConnection::SendReply(const DBusMessage& req, const DBusValueArray& arg
 	if(IsNull(msg))
 		return;
 
-	extpacket.Cat(~msg);
+	sidepacket.Cat(~msg);
 	Touch();
 }
 
@@ -837,7 +838,7 @@ void DBusConnection::SendError(const DBusMessage& req, const String& errname, co
 	if(IsNull(msg))
 		return;
 
-	extpacket.Cat(~msg);
+	sidepacket.Cat(~msg);
 	Touch();
 
 }

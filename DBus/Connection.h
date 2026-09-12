@@ -47,7 +47,7 @@ public:
     Event<const DBusMessage&> WhenMethodCall;
 
     Socket&             GetSocket()                                     { return socket; }
-    dword               GetWaitEvents() const                           { return WAIT_READ | !!extpacket.GetCount() * WAIT_WRITE; }
+    dword               GetWaitEvents() const                           { return WAIT_READ | ((outpacket.GetCount() || sidepacket.GetCount()) ? WAIT_WRITE : 0); }
     DBusConnection&     AddTo(SocketWaitEvent& e)                       { e.Add(socket, GetWaitEvents()); return *this; }
 
     bool                IsError() const                                 { return status == FAILED; }
@@ -56,7 +56,7 @@ public:
     String              GetUniqueName() const                           { return uniquename; }
 
 	static void         Trace(bool b = true)                            { UPPDBUS::trace = b; }
-	static void         TraceVerbose(bool b = true)                     { Trace(); UPPDBUS::beverbose = b; }
+	static void         TraceVerbose(bool b = true)                     { UPPDBUS::trace = b; UPPDBUS::beverbose = b; }
 	
     enum ErrorCodes {
         CONNECTION_FAILED = 10000,
@@ -124,10 +124,11 @@ private:
     };
 
     Socket              socket;
-    String              packet;
-    int                 packlen;
-    String              extpacket;
-    int                 extpacklen;
+    String              inpacket;
+    String              outpacket;
+    int                 outpacklen;
+    String              sidepacket;
+    int                 sidepacklen;
     String              buspath;
     int                 status;
     int                 starttime;

@@ -8,7 +8,7 @@ namespace Upp {
 class DBusInspector {
 public:
     DBusInspector(DBusConnection& dbus);
-    virtual ~DBusInspector()                    {}
+    virtual ~DBusInspector()                     {}
     
     bool            Enumerate();
     bool            EnumerateActivatable();

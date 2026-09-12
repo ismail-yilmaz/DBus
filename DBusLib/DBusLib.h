@@ -6,5 +6,6 @@
 #include "Inspector.h"
 #include "MediaPlayer.h"
 #include "Notification.h"
+#include "NetworkManager.h"
 
 #endif

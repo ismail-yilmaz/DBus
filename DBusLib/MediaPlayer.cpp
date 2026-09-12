@@ -124,21 +124,33 @@ Vector<String> DBusMediaPlayer::GetPlayers() const
 
 bool DBusMediaPlayer::FetchStatus()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusProperties, "Get", { StdDBusMprisPlayer, "PlaybackStatus" });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusProperties,
+		"Get", { StdDBusMprisPlayer, "PlaybackStatus" }
+	);
 }
 
 DBusMediaPlayer::Status DBusMediaPlayer::GetStatus() const
 {
-	return decode(GetFirstArg<String>(dbus.GetMessage(), Null),
-				"Playing", Status::Playing,
-				"Paused",  Status::Paused,
-				"Stopped", Status::Stopped,
-			 /* Unknonw */ Status::Unknown);
+	return decode(
+		GetFirstArg<String>(dbus.GetMessage(), Null),
+		"Playing", Status::Playing,
+		"Paused",  Status::Paused,
+		"Stopped", Status::Stopped,
+		 /* Unknonw */ Status::Unknown
+	);
 }
 
 bool DBusMediaPlayer::FetchMetaData()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusProperties, "Get", { StdDBusMprisPlayer, "Metadata" });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusProperties,
+		"Get", { StdDBusMprisPlayer, "Metadata" }
+	);
 }
 
 DBusValueMap DBusMediaPlayer::GetRawMetaData() const
@@ -155,7 +167,12 @@ DBusMediaPlayer::MetaData DBusMediaPlayer::GetMetaData() const
 
 bool DBusMediaPlayer::FetchPosition()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusProperties, "Get", { StdDBusMprisPlayer, "Position" });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusProperties,
+		"Get", { StdDBusMprisPlayer, "Position" }
+	);
 }
 
 int64 DBusMediaPlayer::GetPosition() const
@@ -165,7 +182,12 @@ int64 DBusMediaPlayer::GetPosition() const
 
 bool DBusMediaPlayer::FetchVolume()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusProperties, "Get", { StdDBusMprisPlayer, "Volume" });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusProperties,
+		"Get", { StdDBusMprisPlayer, "Volume" }
+	);
 }
 
 double DBusMediaPlayer::GetVolume() const
@@ -175,12 +197,22 @@ double DBusMediaPlayer::GetVolume() const
 
 bool DBusMediaPlayer::SetVolume(double vol)
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusProperties, "Set", { StdDBusMprisPlayer, "Volume", AsVariant(vol) });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusProperties,
+		"Set", { StdDBusMprisPlayer, "Volume", AsVariant(vol) }
+	);
 }
 
 bool DBusMediaPlayer::FetchRate()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusProperties, "Get", { StdDBusMprisPlayer, "Rate" });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusProperties,
+		"Get", { StdDBusMprisPlayer, "Rate" }
+	);
 }
 
 double DBusMediaPlayer::GetRate() const
@@ -190,57 +222,112 @@ double DBusMediaPlayer::GetRate() const
 
 bool DBusMediaPlayer::Raise()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisRoot, "Raise");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisRoot,
+		"Raise"
+	);
 }
 
 bool DBusMediaPlayer::Quit()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisRoot, "Quit");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisRoot,
+		"Quit"
+	);
 }
 
 bool DBusMediaPlayer::Play()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "Play");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"Play"
+	);
 }
 
 bool DBusMediaPlayer::Pause()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "Pause");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"Pause"
+	);
 }
 
 bool DBusMediaPlayer::PlayPause()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "PlayPause");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"PlayPause"
+	);
 }
 
 bool DBusMediaPlayer::Stop()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "Stop");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"Stop"
+	);
 }
 
 bool DBusMediaPlayer::Prev()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "Previous");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"Previous"
+	);
 }
 
 bool DBusMediaPlayer::Next()
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "Next");
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"Next"
+	);
 }
 
 bool DBusMediaPlayer::Seek(int64 offset)
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "Seek", { offset });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"Seek", { offset }
+	);
 }
 
 bool DBusMediaPlayer::SetPosition(const String& tid, int64 pos)
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisPlayer, "SetPosition", { tid, pos });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisPlayer,
+		"SetPosition", { tid, pos }
+	);
 }
 
 bool DBusMediaPlayer::OpenUri(const String& uri)
 {
-	return dbus.MethodCall(target, StdDBusMprisPath, StdDBusMprisRoot, "OpenUri", { uri });
+	return dbus.MethodCall(
+		target,
+		StdDBusMprisPath,
+		StdDBusMprisRoot,
+		"OpenUri", { uri }
+	);
 }
 
 }

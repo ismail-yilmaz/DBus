@@ -19,17 +19,32 @@ bool DBusInspector::EnumerateActivatable()
 
 bool DBusInspector::Introspect(const String& service, const String& path)
 {
-	return dbus.MethodCall(service,	path, StdDBusIntrospectable, "Introspect");
+	return dbus.MethodCall(
+		service,
+		path,
+		StdDBusIntrospectable,
+		"Introspect"
+	);
 }
 
 bool DBusInspector::Ping(const String& service, const String& path)
 {
-	return dbus.MethodCall(service, path, StdDBusPeer, "Ping");
+	return dbus.MethodCall(
+		service,
+		path,
+		StdDBusPeer,
+		"Ping"
+	);
 }
 
 bool DBusInspector::FetchMachineId(const String& service, const String& path)
 {
-	return dbus.MethodCall(service, path, StdDBusPeer, "GetMachineId");
+	return dbus.MethodCall(
+		service,
+		path,
+		StdDBusPeer,
+		"GetMachineId"
+	);
 }
 
 }
