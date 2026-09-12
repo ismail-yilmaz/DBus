@@ -1,7 +1,7 @@
 #include "DBus.h"
 
-#define LLOG(x)       do { if(UPPDBUS::trace) RLOG("DBusMessage: " << x); } while(false)
-#define LDUMPHEX(x)	  do { if(UPPDBUS::beverbose) RDUMPHEX(x); } while(false)
+#define LLOG(x)      do { if(UPPDBUS::trace) RLOG("DBusMessage: " << x); } while(false)
+#define LDUMPHEX(x)      do { if(UPPDBUS::beverbose) RDUMPHEX(x); } while(false)
 
 namespace Upp {
 
@@ -82,8 +82,10 @@ char GetValueSignature(const DBusValue& val)
 		return DBUS_UINT64;
 	if(val.Is<double>())
 		return DBUS_DOUBLE;
-	if(val.Is<DBusValueArray>())
+	if(val.Is<DBusValue>())
 		return DBUS_VARIANT;
+	if(val.Is<DBusValueArray>())
+		return DBUS_ARRAY;
 	if(val.Is<DBusValueMap>())
 		return DBUS_ARRAY;
 
@@ -159,6 +161,20 @@ void MarshalParam(String& body, String& signature, const DBusValue& val)
 		AppendAlign(body, 8);
 		double v = val;
 		body.Cat((char*)&v, 8);
+	}
+	else
+	if(val.Is<DBusValue>()) {
+		signature.Cat(DBUS_VARIANT);
+		DBusValue iv = val.To<DBusValue>();
+		String varsig;
+		String dummy;
+		MarshalParam(dummy, varsig, iv);
+		body.Cat((byte) varsig.GetLength());
+		body.Cat(varsig);
+		body.Cat(0);
+		// Directly marshal into the body, which will handle its own byte alignment
+		String unused;
+		MarshalParam(body, unused, iv);
 	}
 	else
 	if(val.Is<DBusValueArray>()) {

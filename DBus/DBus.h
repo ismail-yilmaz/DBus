@@ -53,12 +53,18 @@ public:
     template<typename T>  bool     Is() const                                { return value.Is<T>(); }
     template<typename T>  const T& To() const                                { return value.To<T>(); }
     template<typename T>  operator T() const                                 { return value.To<T>(); }
-                                                                             
+    
+    DBusValue ToVariant() const                                              { return DBusValue(RawToValue(*this)); }
     String ToString() const                                                  { return value.ToString(); }
     
+    
 private:
+    // For variant marshalling only
+    explicit DBusValue(const Value& v) : value(v)                            {}
 	Value value;
 };
+
+inline DBusValue AsVariant(const DBusValue& v)                               { return v.ToVariant(); }
 
 struct DBusError : Exc {
     int code;
@@ -89,4 +95,5 @@ inline constexpr const char* StdDBusPrefix         = "org.freedesktop.DBus.";
 #include "Connection.h"
 
 }
+
 #endif

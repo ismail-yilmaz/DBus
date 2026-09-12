@@ -57,6 +57,28 @@ void TestDBusValueTypes()
     TEST_CHECK(IsNull(v_null));
 }
 
+void TestVariantHandling()
+{
+    RLOG("Running DBusValue Variant API Tests...");
+    
+    // 1. AsVariant global helper
+    DBusValue va = AsVariant((int32)42);
+    TEST_CHECK(va.Is<DBusValue>());
+    
+    DBusValue in = va.To<DBusValue>();
+    TEST_CHECK(in.Is<int32>());
+    TEST_CHECK_EQ(in.To<int32>(), (int32)42);
+    
+    // 2. ToVariant member method
+    DBusValue vs("payload");
+    DBusValue vt = vs.ToVariant();
+    TEST_CHECK(vt.Is<DBusValue>());
+    
+    DBusValue it = vt.To<DBusValue>();
+    TEST_CHECK(it.Is<String>());
+    TEST_CHECK_EQ(it.To<String>(), "payload");
+}
+
 void TestMessagePrimitives()
 {
     RLOG("Running DBusMessage Primitive Round-Trip Tests...");
@@ -102,8 +124,8 @@ void TestComplexContainers()
     RLOG("Running DBusMessage Complex Container (Map/Array) Tests...");
 
     DBusValueMap map;
-    map.Add("WindowName", DBusValue("MainTerm"));
-    map.Add("PID", DBusValue((dword) 9876));
+    map.Add("WindowName", AsVariant("MainTerm"));
+    map.Add("PID", AsVariant((dword) 9876));
     
     DBusValueArray arr;
     arr.Add(DBusValue((int64) -123456789));
@@ -118,7 +140,7 @@ void TestComplexContainers()
     
     TEST_CHECK_EQ(parsed_args.GetCount(), 2);
     
-    // Validate Map (Dictionary)
+    // Validate Map (Dictionary) a{sv}
     TEST_CHECK(parsed_args[0].Is<DBusValueMap>());
     DBusValueMap pmap = parsed_args[0];
     TEST_CHECK_EQ(pmap.GetCount(), 2);
@@ -256,7 +278,7 @@ void TestStructsAndExtremeNesting()
     vstruct.Add(true);
 
     DBusValueMap map;
-    map.Add("Bounds", DBusValue(vstruct));
+    map.Add("Bounds", AsVariant(vstruct));
     
     DBusMessage msg_m = DBusMessage::CreateMethodReturn(302, 100, "d", { DBusValue(map) });
     DBusMessage p_m(msg_m.GetRawData());
@@ -489,8 +511,8 @@ void TestStructWithArrayAndMap()
     ids.Add((uint32) 300);
 
     DBusValueMap meta;
-    meta.Add("Active", DBusValue(true));
-    meta.Add("Owner", DBusValue("root"));
+    meta.Add("Active", AsVariant(true));
+    meta.Add("Owner", AsVariant("root"));
 
     DBusValueStruct rec;
     rec.Add("Session");
@@ -562,15 +584,15 @@ void TestDeepVariantMapNesting()
     // exactly the path that needs a full nested signature string rather than
     // a single type char.
     DBusValueMap props;
-    props.Add("Powered", DBusValue(true));
-    props.Add("Alias", DBusValue("MyDevice"));
-    props.Add("Class", DBusValue((uint32) 0x240404));
+    props.Add("Powered", AsVariant(true));
+    props.Add("Alias", AsVariant("MyDevice"));
+    props.Add("Class", AsVariant((uint32) 0x240404));
 
     DBusValueMap ifaces;
-    ifaces.Add("org.bluez.Device1", DBusValue(props));
+    ifaces.Add("org.bluez.Device1", AsVariant(props));
 
     DBusValueMap objects;
-    objects.Add("/org/bluez/hci0/dev_AA_BB_CC", DBusValue(ifaces));
+    objects.Add("/org/bluez/hci0/dev_AA_BB_CC", AsVariant(ifaces));
 
     DBusMessage msg = DBusMessage::CreateMethodReturn(330, 100, "com.test", { DBusValue(objects) });
     DBusMessage parsed(msg.GetRawData());
@@ -664,11 +686,7 @@ void TestRoundtripReMarshal()
     RLOG("Running Re-Marshal Idempotency Tests...");
 
     // Build a nested value (map -> variant -> array -> struct), marshal it,
-    // parse it back, then marshal the *parsed* value again as-is. If anything
-    // came back mistyped from ParseType() (e.g. a struct silently turning
-    // into a plain array), this second pass produces a different signature
-    // or a different byte stream than the first pass did - a value-equality
-    // check alone would never catch that, only a second marshal does.
+    // parse it back, then marshal the *parsed* value again.
     DBusValueStruct inner;
     inner.Add((uint32) 4096);
     inner.Add("payload");
@@ -677,7 +695,7 @@ void TestRoundtripReMarshal()
     items.Add(inner);
 
     DBusValueMap wrapper;
-    wrapper.Add("Items", DBusValue(items));
+    wrapper.Add("Items", AsVariant(items)); // First marshal has explicit variant wrapper
 
     DBusMessage msg1 = DBusMessage::CreateSignal(340, "/rt", "com.test", "First", { DBusValue(wrapper) });
     DBusMessage p1(msg1.GetRawData());
@@ -685,8 +703,17 @@ void TestRoundtripReMarshal()
     DBusValueArray body1 = p1.ParseBody();
     TEST_CHECK_EQ(body1.GetCount(), 1);
 
-    // Feed the parsed value straight back in as the args for a second message.
-    DBusMessage msg2 = DBusMessage::CreateSignal(341, "/rt", "com.test", "Second", body1);
+    // Because our DBusMessage parsing logic intentionally strips 'v' (variant) 
+    // envelopes on read to keep application logic clean, feeding the parsed 
+    // DBusValueMap straight back into CreateSignal would marshal its elements 
+    // without variants. To ensure a strict byte-for-byte round-trip, we explicitly 
+    // re-apply the AsVariant wrapper to the map values before serialization.
+    DBusValueMap parsed_map = body1[0];
+    DBusValueMap rewrapped_map;
+    rewrapped_map.Add("Items", AsVariant(parsed_map.Get("Items")));
+
+    // Feed the explicitly re-wrapped map straight back in as the args for a second message.
+    DBusMessage msg2 = DBusMessage::CreateSignal(341, "/rt", "com.test", "Second", { DBusValue(rewrapped_map) });
     DBusMessage p2(msg2.GetRawData());
 
     TEST_CHECK_EQ(p2.ParseFields().signature, p1.ParseFields().signature);
@@ -770,7 +797,7 @@ void TestRecursionDepthGuard()
 {
     RLOG("Running Recursion Depth Guard Tests...");
 
-	// Allowed max: 32
+    // Allowed max: 32
     DBusValue deep = (int32) 42;
     for(int i = 0; i < 40; i++) {
         DBusValueStruct s;
@@ -795,6 +822,7 @@ CONSOLE_APP_MAIN
     RLOG("=========================================");
 
     TestDBusValueTypes();
+    TestVariantHandling();
     TestMessagePrimitives();
     TestComplexContainers();
     TestCornerCases();

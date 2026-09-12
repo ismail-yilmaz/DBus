@@ -25,7 +25,7 @@ during implicit conversions. This ensures exact mapping to D`-Bus
 binary signatures (e.g., `'y`', `'n`', `'q`', `'u`', `'t`').&]
 [s3; &]
 [ {{10000F(128)G(128)@1 [s0;%% [* Constructor detail]]}}&]
-[s4; &]
+[s3; &]
 [s5;:Upp`:`:DBusValue`:`:DBusValue`(`): [* DBusValue]()&]
 [s2;%% Default constructor.&]
 [s3; &]
@@ -69,6 +69,18 @@ onst] DBusValueStruct[@(0.0.255) `&] [*@3 v])&]
 [s2;%% Returns true if the underlying Value is Null.&]
 [s3;%% &]
 [s4; &]
+[s5;:Upp`:`:DBusValue`:`:ToVariant`(`)const: DBusValue [* ToVariant]() 
+[@(0.0.255) const]&]
+[s2;%% Variants typically need a special case handling in order to 
+be correctly marshalled . This method nests the current [C^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:DBusValue^ D
+BusValue][C  ]instance inside a new container, explicitly marking 
+it for D`-Bus VARIANT ([C@5 `'v`']) serialization. Returns a new 
+[C^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:DBusValue^ DBusValue][C  
+]containing the original value safely boxed as a variant. See 
+also [C^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:AsVariant`(const DBusValue`&`)^ A
+sVariant()].&]
+[s3; &]
+[s4; &]
 [s5;:Upp`:`:DBusValue`:`:Is`(`)const: [@(0.0.255) template] <[@(0.0.255) typename] 
 [%%*@(0.128.128) T]> [@(0.0.255) bool] [* Is]() [@(0.0.255) const]&]
 [s2;%% Checks if the underlying boxed value matches the requested 
@@ -93,6 +105,17 @@ alue`::To<T>()] method. If the requested type [*@(0.128.128) T]
 does not exactly match the boxed type, this will trigger a runtime 
 assertion failure. &]
 [s3;%% &]
+[s3; &]
+[ {{10000F(128)G(128)@1 [s0;%% [* Convenience Functions]]}}&]
+[s3; &]
+[s5;:Upp`:`:AsVariant`(const DBusValue`&`): DBusValue [* AsVariant]([@(0.0.255) const] 
+DBusValue[@(0.0.255) `&] [*@3 v])&]
+[s0;l288;%% A global helper function that wraps the specified [%-*@3 v 
+]value into a D`-Bus VARIANT ([C@5 `'v`']).&]
+[s2;%% This is functionally identical to calling [C^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:DBusValue`:`:ToVariant`(`)const^ T
+oVariant()][C  method,] but provides a more concise and readable 
+syntax when passing literal primitives directly into inline initializer 
+lists or method calls. &]
 [s0;%% &]
 [ {{10000@(113.42.0) [s0;%% [*@7;4 DBusValueArray]]}}&]
 [s3; &]
@@ -117,5 +140,4 @@ a`{sv`}).&]
 ][@(0.0.255)3 :][3  ][@(0.0.255)3 public][3  Vector<DBusValue>]&]
 [s2;%% A type sage [^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:DBusValue^ DB
 usValue ]struct container D`-Bus structures (is).&]
-[s3; &]
 [s0;%% ]]
