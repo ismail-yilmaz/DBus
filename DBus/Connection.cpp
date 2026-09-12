@@ -66,11 +66,11 @@ void ParseDBusInfo(String path, String& buspath, bool& abstract, bool systembus)
 	abstract = false;
 	if(IsNull(path)) {
 		if(systembus) {
-			path = "/var/run/dbus/system_bus_socket";
+			buspath = "/var/run/dbus/system_bus_socket";
 			abstract = false;
 		}
 		else {
-			path = Format("/run/user/%d/bus", (int) getuid());
+			buspath = Format("/run/user/%d/bus", (int) getuid());
 			abstract = false;
 		}
 		return;
