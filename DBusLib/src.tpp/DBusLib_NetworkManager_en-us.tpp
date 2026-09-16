@@ -16,15 +16,11 @@ topic "DBusNetworkManager";
 [s2;%% This class provides a high`-level interface for querying network 
 states, active connections, and hardware toggles through the 
 system`-wide [C@5 org.freedesktop.NetworkManager] D`-Bus daemon. 
-Like other DBusLib utility classes, it separates network requests 
-from data retrieval. Client  code should first initiate a command 
-(which returns true if the D`-Bus call succeeded), and then retrieve 
-the parsed result using the corresponding Get method. Can be 
-use both in blocking and non`-blocking mode.&]
+Can be used in both blocking and non`-blocking mode.&]
 [s2;%% &]
-[s2;%% [/ Important]: NetworkManager operates on the System Bus. Therefore 
-[C^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection^ DBusCo
-nnection][C  ]must be pre`-intialized using [C^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection`:`:ConnectSystem`(`)^ C
+[s2;%% [/ Important note]: NetworkManager operates on the System Bus. 
+Therefore [C^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection^ D
+BusConnection][C  ]must be pre`-intialized using [C^topic`:`/`/DBus`/src`/Upp`_DBusConnection`_en`-us`#Upp`:`:DBusConnection`:`:ConnectSystem`(`)^ C
 onnectSystem()] method before passing it to this class. Modifying 
 states (via [C@5 Enable`*], [C@5 Disable`*], or [C@5 Sleep ]methods) 
 typically requires active PolicyKit (polkit) privileges.&]

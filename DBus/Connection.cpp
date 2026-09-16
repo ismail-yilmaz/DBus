@@ -25,7 +25,7 @@ String GetDBusAuthExternalPayload()
 	String id;
 
 #ifdef PLATFORM_POSIX
-	id = AsString(getuid());
+	id = AsString((int) getuid());
 #elif PLATFORM_WIN32
 	HANDLE hToken = nullptr;
 
@@ -37,7 +37,6 @@ String GetDBusAuthExternalPayload()
 			if(GetTokenInformation(hToken, TokenUser, ~pTokenUser, dwLength, &dwLength)) {
 				TOKEN_USER* ptu = (TOKEN_USER*) ~pTokenUser;
 				SID* sid = (SID*) ptu->User.Sid;
-
 				if(IsValidSid(sid)) {
 					// Format: S-Revision-Authority-Sub1-Sub2...
 					id << "S-" << (int) sid->Revision << "-";
@@ -162,7 +161,7 @@ bool DBusConnection::Init()
 	dispatching = false;
 #ifdef PLATFORM_WIN32
 	ipinfo.Start(buspath, port);
-	LLOG("Connection to " << buspath << ":" << port);
+	LLOG("Connecting to " << buspath << ":" << port);
 #endif
 	return true;
 }
@@ -194,7 +193,7 @@ bool DBusConnection::TcpConnect()
 bool DBusConnection::FsyConnect()
 {
 	if(socket.ConnectFileSystem(buspath)) {
-		LLOG("Successfully connected to D-Bus at " << buspath);
+		LLOG("Successfully connected to D-Bus (filesystem) at " << buspath);
 		return true;
 	}
 	return false;
@@ -388,7 +387,7 @@ bool DBusConnection::AuthRequest()
 
 bool DBusConnection::AuthIsEof()
 {
-	if(inpacket.GetCount() > 1) {
+	if(inpacket.GetCount() > 1) { // Faster than String::EndsWith("\r\n")
 		const char* c = inpacket.Last();
 		if(c[-1] == '\r' && c[0] == '\n') {
 			return AuthParse();
@@ -607,7 +606,7 @@ bool DBusConnection::MethodIsEof()
 		}
 		else
 		if(msg.IsMethodReturn() || msg.IsError()) {
-			if(dword rep = msg.ParseFields().reply; rep == callserial) {
+			if(msg.ParseFields().reply == callserial) {
 				replymsg = msg;
 				return true;
 			}
@@ -618,6 +617,8 @@ bool DBusConnection::MethodIsEof()
 
 void DBusConnection::Listen()
 {
+	ASSERT(socket.IsOpen());
+	
 	if(InProgress()) {
 		LLOG("Aborting. Listen attempted while a previous operation is still in progress.");
 		return;
@@ -726,8 +727,8 @@ bool DBusConnection::AddMatch(const String& rule, Event<const DBusMessage&> cb)
 		Touch();
 		return true;
 	}
-	else
-		return BusMethodCall("AddMatch", { rule });
+	
+	return BusMethodCall("AddMatch", { rule });
 }
 
 bool DBusConnection::RemoveMatch(const String& rule)
@@ -752,8 +753,8 @@ bool DBusConnection::RemoveMatch(const String& rule)
 		Touch();
 		return true;
 	}
-	else
-		return BusMethodCall("RemoveMatch", { rule });
+	
+	return BusMethodCall("RemoveMatch", { rule });
 }
 
 void DBusConnection::RestoreMatches()
@@ -797,6 +798,7 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 
 	sidepacket.Cat(~msg);
 	Touch();
+	
 	return dispatching ? true : Run();
 }
 
@@ -828,7 +830,7 @@ void DBusConnection::SendError(const DBusMessage& req, const String& errname, co
 	ASSERT(socket.IsOpen());
 
 	DBusMessage::FieldData fd = req.ParseFields();
-	DBusMessage msg =  DBusMessage::CreateError(
+	DBusMessage msg = DBusMessage::CreateError(
 		serial++,
 		req.GetSerial(),
 		fd.sender,

@@ -215,7 +215,7 @@ Returns true if the message matches the rule parameters.&]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:Header`:`:type: [@(0.128.128) byte ][* type]&]
 [s2;%% The message type. Can be one of the following: [C@5 METHOD`_CALL], 
-[C@5 METHOD`_RETURN], [C@5 ERROR], [C@5 SIGNAL].&]
+[C@5 METHOD`_RETURN], [C@5 BUS`_ERROR], [C@5 SIGNAL].&]
 [s3; &]
 [s4; &]
 [s5;:Upp`:`:DBusMessage`:`:Header`:`:flags: [@(0.128.128) byte ][* flags]&]

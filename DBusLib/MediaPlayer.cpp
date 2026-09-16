@@ -103,11 +103,6 @@ DBusMediaPlayer& DBusMediaPlayer::Target(const String& player)
 	return *this;
 }
 
-String DBusMediaPlayer::GetTarget() const
-{
-	return target;
-}
-
 bool DBusMediaPlayer::FetchPlayers()
 {
 	return dbus.BusMethodCall("ListNames");
@@ -153,11 +148,6 @@ bool DBusMediaPlayer::FetchMetaData()
 	);
 }
 
-DBusValueMap DBusMediaPlayer::GetRawMetaData() const
-{
-	return GetFirstArg<DBusValueMap>(dbus.GetMessage(), Null);
-}
-
 DBusMediaPlayer::MetaData DBusMediaPlayer::GetMetaData() const
 {
 	MetaData mdata;
@@ -175,11 +165,6 @@ bool DBusMediaPlayer::FetchPosition()
 	);
 }
 
-int64 DBusMediaPlayer::GetPosition() const
-{
-	return GetFirstArg<int64>(dbus.GetMessage(), -1);
-}
-
 bool DBusMediaPlayer::FetchVolume()
 {
 	return dbus.MethodCall(
@@ -188,11 +173,6 @@ bool DBusMediaPlayer::FetchVolume()
 		StdDBusProperties,
 		"Get", { StdDBusMprisPlayer, "Volume" }
 	);
-}
-
-double DBusMediaPlayer::GetVolume() const
-{
-	return GetFirstArg<double>(dbus.GetMessage(), -1.0);
 }
 
 bool DBusMediaPlayer::SetVolume(double vol)
@@ -213,11 +193,6 @@ bool DBusMediaPlayer::FetchRate()
 		StdDBusProperties,
 		"Get", { StdDBusMprisPlayer, "Rate" }
 	);
-}
-
-double DBusMediaPlayer::GetRate() const
-{
-	return GetFirstArg<double>(dbus.GetMessage(), 1.0);
 }
 
 bool DBusMediaPlayer::Raise()

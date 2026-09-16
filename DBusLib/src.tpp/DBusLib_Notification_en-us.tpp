@@ -15,11 +15,7 @@ topic "DBusNotification";
 [s1;:Upp`:`:DBusNotification: [@(0.0.255)3 class][3  ][*3 DBusNotification]&]
 [s0;l288;%% Tis class provides an easy`-to`-use interface for interacting 
 with the desktop environment`'s notification daemon via the [C@5 org.freedesktop.No
-tifications] standard. Like other DBusLib utility classes, it 
-separates network requests from data retrieval. Client  code 
-should first initiate a command (which returns true if the D`-Bus 
-call succeeded), and then retrieve the parsed result using the 
-corresponding Get method. Can be use both in blocking and non`-blocking 
+tifications] standard. Can be used in both blocking and non`-blocking 
 mode.&]
 [s3; &]
 [ {{10000F(128)G(128)@1 [s0;%% [* Constructor detail]]}}&]

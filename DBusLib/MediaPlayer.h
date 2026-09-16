@@ -43,7 +43,7 @@ public:
     virtual ~DBusMediaPlayer() {}
     
     DBusMediaPlayer& Target(const String& player);
-    String           GetTarget() const;
+    String           GetTarget() const                { return target; }
     
     bool             FetchPlayers();
     Vector<String>   GetPlayers() const;
@@ -52,18 +52,18 @@ public:
     Status           GetStatus() const;
     
     bool             FetchMetaData();
-    MetaData         GetMetaData() const ;
-    DBusValueMap     GetRawMetaData() const;
+    MetaData         GetMetaData() const;
+    DBusValueMap     GetRawMetaData() const           { return GetFirstArg<DBusValueMap>(dbus.GetMessage(), Null); }
 
     bool             FetchPosition();
-    int64            GetPosition() const;
+    int64            GetPosition() const              { return GetFirstArg<int64>(dbus.GetMessage(), -1); }
 
     bool             FetchVolume();
-    double           GetVolume() const;
+    double           GetVolume() const                { return GetFirstArg<double>(dbus.GetMessage(), -1.0); }
     bool             SetVolume(double vol);
 
     bool             FetchRate();
-    double           GetRate() const;
+    double           GetRate() const                  { return GetFirstArg<double>(dbus.GetMessage(), 1.0); }
     
     bool             Raise();
     bool             Quit();

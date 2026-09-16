@@ -7,7 +7,7 @@ public:
     DBusConnection&     WaitStep(int ms)                                { waitstep = max(0, ms); return *this; }
 
     DBusConnection&     NonBlocking(bool b = true)                      { async = b; return *this; }
-    bool                IsBlocking() const                              { return IsNull(timeout);  }
+    bool                IsBlocking() const                              { return !async;  }
 
     bool                Connect(const String& path, bool abstract = false);
     bool                ConnectSession();

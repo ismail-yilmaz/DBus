@@ -60,38 +60,6 @@ void AppendField(String& fields, byte code, char sig, dword val)
 	fields.Cat((char*)&val, 4);
 }
 
-char GetValueSignature(const DBusValue& val)
-{
-	if(val.Is<String>())
-		return DBUS_STRING;
-	if(val.Is<bool>())
-		return DBUS_BOOL;
-	if(val.Is<byte>())
-		return DBUS_BYTE;
-	if(val.Is<int16>())
-		return DBUS_INT16;
-	if(val.Is<uint16>())
-		return DBUS_UINT16;
-	if(val.Is<int32>())
-		return DBUS_INT32;
-	if(val.Is<uint32>())
-		return DBUS_UINT32;
-	if(val.Is<int64>())
-		return DBUS_INT64;
-	if(val.Is<uint64>())
-		return DBUS_UINT64;
-	if(val.Is<double>())
-		return DBUS_DOUBLE;
-	if(val.Is<DBusValue>())
-		return DBUS_VARIANT;
-	if(val.Is<DBusValueArray>())
-		return DBUS_ARRAY;
-	if(val.Is<DBusValueMap>())
-		return DBUS_ARRAY;
-
-	return DBUS_STRING;
-}
-
 void MarshalParam(String& body, String& signature, const DBusValue& val)
 {
 	if(val.Is<String>()) {
@@ -661,7 +629,13 @@ DBusMessage::FieldData DBusMessage::ParseFields() const
 	catch(const DBusError& e) {
 		LLOG("ParseFields() failed: " << e);
 	}
-
+	catch(const ValueTypeError& e) {
+		LLOG("ParseFields() failed: " << e);
+	}
+	catch(...) {
+		LLOG("ParseFieleds(): Unknown exception!");
+	}
+	
 	return fields;
 }
 
@@ -693,6 +667,12 @@ DBusValueArray DBusMessage::ParseBody() const
 	}
 	catch(const DBusError& e) {
 		LLOG("ParseBody() failed: " << e);
+	}
+	catch(const ValueTypeError& e) {
+		LLOG("ParseBody() failed: " << e);
+	}
+	catch(...) {
+		LLOG("ParseBody(): Unknown exception!");
 	}
 
 	return res;
@@ -776,6 +756,12 @@ Vector<String> DBusMessage::ParseStringArray() const
 	catch(const DBusError& e) {
 		LLOG("ParseStringArray() failed: " << e);
 	}
+	catch(const ValueTypeError& e) {
+		LLOG("ParseStringArray() failed: " << e);
+	}
+	catch(...) {
+		LLOG("ParseStringArray(): Unknown exception!");
+	}
 
 	return result;
 }
@@ -796,11 +782,17 @@ String DBusMessage::ParseString() const
 	}
 	catch(const BParser::Error& e) {
 		LLOG("ParseString() failed: " << e);
-		return String::GetVoid();
 	}
 	catch(const DBusError& e) {
 		LLOG("ParseString() failed: " << e);
-		return String::GetVoid();
 	}
+	catch(const ValueTypeError& e) {
+		LLOG("ParseString() failed: " << e);
+	}
+	catch(...) {
+		LLOG("ParseString(): Unknown exception!");
+	}
+
+	return String::GetVoid();
 }
 }

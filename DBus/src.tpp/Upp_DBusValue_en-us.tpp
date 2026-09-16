@@ -138,6 +138,6 @@ a`{sv`}).&]
 [s3; &]
 [s1;:Upp`:`:DBusValueStruct: [@(0.0.255)3 struct][3  ][*3 DBusValueStruct][3  
 ][@(0.0.255)3 :][3  ][@(0.0.255)3 public][3  Vector<DBusValue>]&]
-[s2;%% A type sage [^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:DBusValue^ DB
-usValue ]struct container D`-Bus structures (is).&]
+[s2;%% A type`-safe [^topic`:`/`/DBus`/src`/Upp`_DBusValue`_en`-us`#Upp`:`:DBusValue^ D
+BusValue ]struct container for D`-Bus structures (is).&]
 [s0;%% ]]
