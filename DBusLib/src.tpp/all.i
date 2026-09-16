@@ -18,3 +18,7 @@ TOPIC("DBusLib_Notification_en-us")
 #include "DBusLib_Notification_en-us.tppi"
 END_TOPIC
 
+TOPIC("DBusLib_Screenshot_en-us")
+#include "DBusLib_Screenshot_en-us.tppi"
+END_TOPIC
+

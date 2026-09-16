@@ -108,7 +108,7 @@ bool DBusFileSelector::Run(const char *method, const String& title, bool asdir)
 	      << "interface='org.freedesktop.portal.Request',"
 	      << "path='" << reqpath << "'";
 
-	dbus.AddMatch(match, [&](const DBusMessage& msg) {
+	if(!dbus.AddMatch(match, [&](const DBusMessage& msg) {
 		if(msg.ParseFields().member == "Response") {
 			DBusValueArray args = msg.ParseBody();
 			if(args.GetCount() > 1 && (uint32) args[0] == 0) {
@@ -128,7 +128,7 @@ bool DBusFileSelector::Run(const char *method, const String& title, bool asdir)
 			}
 		}
 		dbus.Abort();
-	});
+	})) return false;
 
 	int timeout = dbus.GetTimeout();
 	dbus.Timeout(Null).Listen();

@@ -8,5 +8,6 @@
 #include "Notification.h"
 #include "NetworkManager.h"
 #include "FileSelector.h"
+#include "Screenshot.h"
 
 #endif

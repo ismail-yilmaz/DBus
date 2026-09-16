@@ -38,4 +38,5 @@ The DBus nest ships with ready-to-run interactive examples demonstrating both cl
 | **NetworkManager** | Demonstrates the basic usage of NetworkManager's D-Bus interface. |
 | **Notify** | A minimal client application demonstrating how to trigger a native desktop notification using a simple blocking method call. |
 | **Properties** | Demonstrates how to query and parse complex nested structures using the standard `org.freedesktop.DBus.Properties` interface. |
+| **Screenshot** | Demonstrates how to take screenshots using D-Bus desktop portal's screenshot interface. |
 | **Server** | A headless background daemon that claims a well-known bus name and routes remote method requests asynchronously. |

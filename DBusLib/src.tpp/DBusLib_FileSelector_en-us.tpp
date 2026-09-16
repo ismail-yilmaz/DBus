@@ -71,7 +71,7 @@ Returns `*this for method chaining.&]
 [s5;:Upp`:`:DBusFileSelector`:`:ExecuteOpen`(const String`&`): [@(0.0.255) bool] 
 [* ExecuteOpen]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 title] 
 [@(0.0.255) `=] [@(0.128.128) Null])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Executes the dialog in `"[C@5 Open]`" mode. [%-*@3 title] optionally 
 overrides the default dialog window title. Returns true if the 
 user successfully selected one or more files, or false if the 
@@ -81,7 +81,7 @@ dialog was cancelled or an error occurred.&]
 [s5;:Upp`:`:DBusFileSelector`:`:ExecuteSaveAs`(const String`&`): [@(0.0.255) bool] 
 [* ExecuteSaveAs]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 title] 
 [@(0.0.255) `=] [@(0.128.128) Null])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Executes the dialog in `"[C@5 Save As]`" mode. [%-*@3 title] optionally 
 overrides the default dialog window title. Returns true if the 
 user successfully selected destination path, or false if the 
@@ -91,7 +91,7 @@ dialog was cancelled or an error occurred.&]
 [s5;:Upp`:`:DBusFileSelector`:`:ExecuteSelectDir`(const String`&`): [@(0.0.255) bool] 
 [* ExecuteSelectDir]([@(0.0.255) const] String[@(0.0.255) `&] [*@3 title] 
 [@(0.0.255) `=] [@(0.128.128) Null])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Executes the dialog in `"Directory Selection`" mode, allowing 
 the user to pick a folder instead of a file. [%-*@3 title] optionally 
 overrides the default dialog window title. Returns true if a 
@@ -119,7 +119,7 @@ mirroring the standard CtrlLib file selector globals.&]
 [s5;:Upp`:`:SelectOpenFile`(DBusConnection`&`,const String`&`): String 
 [* SelectOpenFile](DBusConnection[@(0.0.255) `&] [*@3 dbus], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 types] [@(0.0.255) `=] [@(0.128.128) Null])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Prompts the user to select a single file to open. Returns 
 the selected file path, or Null if cancelled. The [%-*@3 types][%-  
 ]string format expects descriptions and patterns separated by 
@@ -131,7 +131,7 @@ Files][C@6 `\t][C@5 `*.txt]`"&]
 [s5;:Upp`:`:SelectOpenFiles`(DBusConnection`&`,const String`&`): Vector<String> 
 [* SelectOpenFiles](DBusConnection[@(0.0.255) `&] [*@3 dbus], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 types] [@(0.0.255) `=] Null)&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Prompts the user to select multiple files to open. Returns 
 a vector of strings containing all selected paths on success. 
 The [%-*@3 types][%-  ]string format expects descriptions and patterns 
@@ -143,7 +143,7 @@ by a newline ([C@5 `\n]). Example: `"[C@5 Images][C@6 `\t][C@5 `*.png
 [s5;:Upp`:`:SelectLoadFile`(DBusConnection`&`,const String`&`): String 
 [* SelectLoadFile](DBusConnection[@(0.0.255) `&] [*@3 dbus], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 types] [@(0.0.255) `=] [@(0.128.128) Null])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Prompts the user to select a file, reads the entire file into 
 memory, and returns its contents as a String. Returns Null if 
 the dialog was cancelled or the file could not be read. The [%-*@3 types][%-  
@@ -157,7 +157,7 @@ Files][C@6 `\t][C@5 `*.txt]`"&]
 ool] [* SelectSaveFile](DBusConnection[@(0.0.255) `&] [*@3 dbus], [@(0.0.255) const] 
 String[@(0.0.255) `&] [*@3 data], [@(0.0.255) const] String[@(0.0.255) `&] 
 [*@3 types] [@(0.0.255) `=] [@(0.128.128) Null])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Prompts the user for a destination path and saves data to 
 that location. Returns true if the file was successfully saved, 
 or false if cancelled or a write error occurred. The [%-*@3 types][%-  
@@ -169,7 +169,7 @@ Files][C@6 `\t][C@5 `*.txt]`"&]
 [s4; &]
 [s5;:Upp`:`:SelectDirectory`(DBusConnection`&`): String [* SelectDirectory](DBusConnect
 ion[@(0.0.255) `&] [*@3 dbus])&]
-[s6;%% Requires an open D`-Bus connection in blocking mode.&]
+[s6;%% Requires a D`-Bus connection in blocking mode.&]
 [s2;%% Prompts the user to select a directory/folder. Returns the 
 selected directory path, or Null if cancelled.&]
 [s3; &]
