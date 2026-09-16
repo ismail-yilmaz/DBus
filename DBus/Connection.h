@@ -4,6 +4,8 @@ public:
     virtual ~DBusConnection();
     
     DBusConnection&     Timeout(int ms)                                 { timeout = ms; return *this; }
+    int                 GetTimeout() const                              { return timeout; }
+
     DBusConnection&     WaitStep(int ms)                                { waitstep = max(0, ms); return *this; }
 
     DBusConnection&     NonBlocking(bool b = true)                      { async = b; return *this; }
@@ -38,7 +40,7 @@ public:
 	bool                IsSuccess() const                               { return status == FINISHED; }
 	bool                IsFailure() const                               { return status == FAILED; }
 	
-	void                Finish()                                        { status = FINISHED; Abort(); }
+	void                Finish()                                        { status = FINISHED; }
 	void                Abort()                                         { socket.Abort(); }
 	
     const DBusMessage&  GetMessage() const                              { return replymsg; }

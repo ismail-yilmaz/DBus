@@ -532,6 +532,8 @@ bool DBusConnection::MethodCall(const String& dest, const String& path,	const St
 	replymsg = Null;
 	callserial = serial++;
 
+	LLOG(Format("MethodCall(name: %s, path: %s, interface: %s, method: %s)", dest, path, iface, method));
+
 	DBusMessage msg = DBusMessage::CreateMethodCall(
 		callserial,
 		dest,
@@ -785,6 +787,8 @@ bool DBusConnection::BroadcastSignal(const String& path, const String& iface, co
 																	const DBusValueArray& args)
 {
 	ASSERT(socket.IsOpen());
+
+	LLOG(Format("BroadcastSignal(path: %s, interface: %s, name: %s)", path, iface, name));
 
 	DBusMessage msg = DBusMessage::CreateSignal(
 		serial++,

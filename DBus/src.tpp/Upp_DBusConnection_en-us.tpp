@@ -47,6 +47,11 @@ chaining. Timeout can be set to Null if no timeout is desired
 isten()])&]
 [s3; &]
 [s4; &]
+[s5;:Upp`:`:DBusConnection`:`:GetTimeout`(`)const: [@(0.0.255) int] 
+[* GetTimeout]() [@(0.0.255) const]&]
+[s2;%% Returns the timeout value.&]
+[s3; &]
+[s4; &]
 [s5;:Upp`:`:DBusConnection`:`:WaitStep`(int`): DBusConnection[@(0.0.255) `&] 
 [* WaitStep]([@(0.0.255) int] [*@3 ms])&]
 [s2; Sets the polling interval in milliseconds used by the internal 

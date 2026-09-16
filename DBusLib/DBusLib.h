@@ -7,5 +7,6 @@
 #include "MediaPlayer.h"
 #include "Notification.h"
 #include "NetworkManager.h"
+#include "FileSelector.h"
 
 #endif

@@ -2,12 +2,10 @@ description "Demonstrates D-Bus native file chooser integration.\377";
 
 uses
 	Core,
-	DBus;
+	DBusLib;
 
 file
-	FileChooser.h,
-	FileChooser.cpp,
-	FileChooser.t;
+	FileChooser.cpp;
 
 mainconfig
 	"" = "";

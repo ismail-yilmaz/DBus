@@ -1,3 +1,7 @@
+TOPIC("DBusLib_FileSelector_en-us")
+#include "DBusLib_FileSelector_en-us.tppi"
+END_TOPIC
+
 TOPIC("DBusLib_Inspector_en-us")
 #include "DBusLib_Inspector_en-us.tppi"
 END_TOPIC
